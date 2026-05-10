@@ -1,0 +1,148 @@
+/* Game Layout */
+.game-wrap {
+  width: 100%;
+  max-width: 420px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.scoreboard {
+  display: flex;
+  gap: 12px;
+}
+
+.player-card {
+  flex: 1;
+  background: var(--color-surface);
+  border-radius: 12px;
+  padding: 12px;
+  text-align: center;
+  border: 2px solid transparent;
+  transition: border-color 0.2s;
+}
+
+.player-card.active {
+  border-color: var(--color-accent);
+}
+
+.player-name {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  margin-bottom: 4px;
+}
+
+.player-score {
+  font-size: 2rem;
+  font-weight: bold;
+}
+
+.player-status {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  margin-top: 4px;
+  min-height: 16px;
+}
+
+.dice-area {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  min-height: 72px;
+  align-items: center;
+}
+
+.die {
+  width: 56px;
+  height: 56px;
+  background: var(--color-dice-bg);
+  color: var(--color-dice-dot);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+  font-weight: bold;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.dice-placeholder {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
+.turn-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+}
+
+.turn-label {
+  color: var(--color-text-muted);
+}
+
+.turn-score {
+  font-weight: bold;
+  color: var(--color-accent);
+}
+
+.buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.btn {
+  flex: 1;
+  padding: 14px;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.btn-primary {
+  background: var(--color-accent);
+  color: var(--color-bg);
+}
+
+.btn-secondary {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.winner-banner {
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: var(--color-success);
+  padding: 12px;
+  background: var(--color-surface);
+  border-radius: 12px;
+}
+
+.log {
+  background: var(--color-surface);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  min-height: 80px;
+}
+
+.log-entry {
+  padding: 2px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}

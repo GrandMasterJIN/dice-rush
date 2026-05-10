@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Dice Rush</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Crimson+Pro:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="src/themes/style.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+  <!-- ENTRY SCREEN: auth replaces name screen -->
+  <div id="screen-name" class="screen active">
+    <div class="name-card">
+
+      <!-- SVG monogram logo -->
+      <div class="logo">
+        <svg viewBox="0 0 80 80" width="54" height="54" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="brass-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%"  stop-color="#f0d060"/>
+              <stop offset="50%" stop-color="#c89020"/>
+              <stop offset="100%" stop-color="#7a5010"/>
+            </linearGradient>
+            <filter id="logo-shadow">
+              <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="rgba(0,0,0,0.6)"/>
+            </filter>
+          </defs>
+          <g transform="translate(4,14)" filter="url(#logo-shadow)">
+            <rect x="0" y="0" width="38" height="38" rx="6" fill="#1a0e04" stroke="url(#brass-grad)" stroke-width="1.5"/>
+            <circle cx="10" cy="10" r="3.2" fill="url(#brass-grad)"/>
+            <circle cx="19" cy="19" r="3.2" fill="url(#brass-grad)"/>
+            <circle cx="28" cy="28" r="3.2" fill="url(#brass-grad)"/>
+            <rect x="1.5" y="1.5" width="6" height="35" rx="3" fill="rgba(255,255,255,0.06)"/>
+          </g>
+          <g transform="translate(38,28)" filter="url(#logo-shadow)">
+            <rect x="0" y="0" width="38" height="38" rx="6" fill="#1a0e04" stroke="url(#brass-grad)" stroke-width="1.5"/>
+            <circle cx="12" cy="12" r="3.2" fill="url(#brass-grad)"/>
+            <circle cx="26" cy="12" r="3.2" fill="url(#brass-grad)"/>
+            <circle cx="19" cy="19" r="3.2" fill="url(#brass-grad)"/>
+            <circle cx="12" cy="26" r="3.2" fill="url(#brass-grad)"/>
+            <circle cx="26" cy="26" r="3.2" fill="url(#brass-grad)"/>
+            <rect x="1.5" y="1.5" width="6" height="35" rx="3" fill="rgba(255,255,255,0.06)"/>
+          </g>
+        </svg>
+      </div>
+
+      <!-- Title -->
+      <div class="title-block">
+        <h1 class="game-title">Dice Rush</h1>
+        <div class="title-rule">
+          <span class="rule-line"></span>
+          <span class="rule-diamond">◆</span>
+          <span class="rule-line"></span>
+        </div>
+        <p class="tagline">Est. 1000 Points</p>
+      </div>
+
+      <div class="card-divider"></div>
+
+      <!-- AUTH TABS inline in card -->
+      <div class="entry-auth-tabs">
+        <button class="entry-auth-tab" id="entry-tab-signup">Sign Up</button>
+        <button class="entry-auth-tab active" id="entry-tab-login">Log In</button>
+      </div>
+
+      <!-- Sign Up panel -->
+      <div id="entry-panel-signup" class="entry-auth-panel" style="display:none">
+        <form id="entry-signup-form" novalidate>
+          <label class="auth-label" for="entry-signup-username">Username</label>
+          <input class="auth-input" id="entry-signup-username" type="text" placeholder="Your display name" maxlength="20" autocomplete="username" />
+          <label class="auth-label" for="entry-signup-email">Email</label>
+          <input class="auth-input" id="entry-signup-email" type="email" placeholder="you@example.com" autocomplete="email" />
+          <label class="auth-label" for="entry-signup-password">Password</label>
+          <input class="auth-input" id="entry-signup-password" type="password" placeholder="At least 6 characters" autocomplete="new-password" />
+          <label class="auth-label" for="entry-signup-password2">Confirm Password</label>
+          <input class="auth-input" id="entry-signup-password2" type="password" placeholder="Repeat password" autocomplete="new-password" />
+          <p id="entry-signup-error" class="auth-error"></p>
+          <button class="auth-submit" id="entry-signup-submit" type="submit" data-label="Create Account &amp; Play">Create Account &amp; Play</button>
+        </form>
+      </div>
+
+      <!-- Log In panel -->
+      <div id="entry-panel-login" class="entry-auth-panel">
+        <form id="entry-login-form" novalidate>
+          <label class="auth-label" for="entry-login-email">Email</label>
+          <input class="auth-input" id="entry-login-email" type="email" placeholder="you@example.com" autocomplete="email" />
+          <label class="auth-label" for="entry-login-password">Password</label>
+          <input class="auth-input" id="entry-login-password" type="password" placeholder="Your password" autocomplete="current-password" />
+          <p id="entry-login-error" class="auth-error"></p>
+          <button class="auth-submit" id="entry-login-submit" type="submit" data-label="Log In &amp; Play">Log In &amp; Play</button>
+          <button type="button" class="auth-text-btn" id="entry-forgot-link">Forgot password?</button>
+        </form>
+      </div>
+
+      <!-- Forgot Password panel -->
+      <div id="entry-panel-reset" class="entry-auth-panel" style="display:none">
+        <form id="entry-reset-form" novalidate>
+          <p class="auth-reset-hint">Enter your email and we\'ll send you a reset link.</p>
+          <label class="auth-label" for="entry-reset-email">Email</label>
+          <input class="auth-input" id="entry-reset-email" type="email" placeholder="you@example.com" autocomplete="email" />
+          <p id="entry-reset-error" class="auth-error"></p>
+          <button class="auth-submit" id="entry-reset-submit" type="submit" data-label="Send Reset Email">Send Reset Email</button>
+          <button type="button" class="auth-text-btn" id="entry-back-link">&larr; Back to Log In</button>
+        </form>
+      </div>
+
+      <div class="card-divider"></div>
+
+      <div class="difficulty-row">
+        <span class="diff-label">Opponent Skill:</span>
+        <button class="diff-btn active" data-diff="easy">Easy</button>
+        <button class="diff-btn" data-diff="hard">Hard</button>
+      </div>
+
+      <div class="corner-ornament top-left">♦</div>
+      <div class="corner-ornament top-right">♦</div>
+      <div class="corner-ornament bot-left">♣</div>
+      <div class="corner-ornament bot-right">♣</div>
+
+    </div>
+  </div>
+
+  <!-- GAME SCREEN -->
+  <div id="screen-game" class="screen">
+
+    <!-- AUTH BADGE (top-right, shown when logged in) -->
+    <div id="auth-badge-wrap">
+      <div id="auth-badge"></div>
+      <button id="btn-settings" aria-label="Game settings">⚙</button>
+      <div id="auth-dropdown">
+        <button id="auth-logout-btn">Log Out</button>
+      </div>
+    </div>
+
+    <!-- SETTINGS MODAL -->
+    <div id="settings-overlay">
+      <div id="settings-modal">
+        <div id="settings-title">Game Settings</div>
+        <div class="settings-row">
+          <span class="settings-label">Game Hints</span>
+          <button id="hints-toggle" role="switch" aria-checked="true">
+            <span id="hints-toggle-knob"></span>
+          </button>
+        </div>
+        <div class="settings-row" id="replay-row">
+          <span class="settings-label">Replay Tutorial</span>
+          <button id="btn-replay-tutorial">Reset</button>
+        </div>
+        <button id="btn-settings-close">Close</button>
+      </div>
+    </div>
+
+    <!-- MAIN LAYOUT -->
+    <div id="game-layout">
+
+      <!-- LEFT SCALE: Human -->
+      <div class="scale-column" id="scale-human-col">
+        <!-- Player name replaces BARREL tag -->
+        <div class="scale-top-tag" id="scale-human-top-tag">You</div>
+        <div class="scale-bolts-row">
+          <span class="scale-bolt-pip" id="bolt-h-0" data-tooltip="Bolt 1/3 — roll zero 3 times and lose 100 pts." aria-label="Bolt 1 of 3">⚡</span>
+          <span class="scale-bolt-pip" id="bolt-h-1" data-tooltip="Bolt 2/3 — roll zero 3 times and lose 100 pts." aria-label="Bolt 2 of 3">⚡</span>
+          <span class="scale-bolt-pip" id="bolt-h-2" data-tooltip="Bolt 3/3 — roll zero 3 times and lose 100 pts." aria-label="Bolt 3 of 3">⚡</span>
+        </div>
+        <div class="scale-thermo-wrap">
+          <div class="scale-labels-col" id="labels-human"></div>
+          <div class="scale-tube-housing">
+            <div class="scale-track" id="track-human">
+              <div class="scale-fill" id="fill-human">
+                <div class="scale-barrel-crown" id="crown-human"></div>
+              </div>
+              <div class="scale-score-marker marker-left" id="marker-human" aria-label="Your score">0</div>
+            </div>
+          </div>
+        </div>
+        <div class="scale-lock-wrap" id="lock-human-wrap" role="status">
+          <div class="scale-lock" id="lock-human" aria-label="Lock status"></div>
+          <div class="scale-lock-label" id="scale-human-status">Locked</div>
+          <div class="scale-lock-sub" id="scale-human-sub"></div>
+        </div>
+        <div class="scale-bolts" id="scale-human-bolts" style="display:none"></div>
+      </div>
+
+      <!-- CENTER PANEL -->
+      <div id="center-panel">
+        <div id="table-frame">
+          <div id="table-inner">
+
+            <!-- MIDDLE ZONE: dice pit -->
+            <div id="dice-area">
+              <div id="dice-pit-perspective">
+                <div id="dice-container">
+                  <canvas id="dice-canvas" width="713" height="606"></canvas>
+                </div>
+              </div>
+            </div>
+
+            <!-- BOTTOM ZONE: narrator + toast + buttons -->
+            <div id="bottom-zone">
+
+              <!-- COMMS PANEL: two-zone status + message (replaces narrator-bar + regular toasts) -->
+              <div id="comms-panel">
+                <!-- Zone 1: Status strip -->
+                <div id="comms-status">
+                  <span class="comms-label">Turn</span>
+                  <span id="comms-turn-num">—</span>
+                  <span class="comms-sep">·</span>
+                  <span id="comms-whose-turn">—</span>
+                  <span class="comms-sep">·</span>
+                  <span id="comms-turn-score"></span>
+                </div>
+                <!-- Zone 2: Message panel -->
+                <div id="comms-message" class="skin-neutral">
+                  <span id="comms-icon"></span>
+                  <span id="comms-text">Roll the dice to start!</span>
+                </div>
+              </div>
+
+              <!-- EVENT TOAST: kept ONLY for winner announcement ceremony -->
+              <div id="event-toast" role="alert" aria-live="assertive">
+                <div class="toast-icon" id="toast-icon"></div>
+                <div class="toast-body">
+                  <p class="toast-title" id="toast-title"></p>
+                  <p class="toast-sub" id="toast-sub"></p>
+                </div>
+                <div class="toast-bar"><div class="toast-bar-inner" id="toast-bar-inner"></div></div>
+              </div>
+
+              <div id="action-buttons">
+                <button id="btn-roll" class="btn-action btn-roll" aria-label="Roll dice">Roll</button>
+                <button id="btn-bank" class="btn-action btn-bank" disabled aria-label="Bank current score">Bank</button>
+              </div>
+              <div id="action-buttons-spacer"></div>
+              <button id="btn-play-again-inline">Play Again</button>
+
+              <!-- Guest score prompt (shown on game over if not logged in) -->
+              <div id="auth-guest-prompt" class="auth-guest-prompt">
+                <p>Save your score to the leaderboard</p>
+                <div class="auth-guest-btns">
+                  <button class="auth-link-btn" id="gameover-signup-btn">Create Account</button>
+                  <button class="auth-link-btn secondary" id="gameover-login-btn">Log In</button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT SCALE: Bot -->
+      <div class="scale-column" id="scale-bot-col">
+        <!-- Bot name replaces JACKPOT tag -->
+        <div class="scale-top-tag" id="scale-bot-top-tag">Bot</div>
+        <div class="scale-bolts-row">
+          <span class="scale-bolt-pip" id="bolt-b-0" data-tooltip="Bolt 1/3 — roll zero 3 times and lose 100 pts." aria-label="Bolt 1 of 3">⚡</span>
+          <span class="scale-bolt-pip" id="bolt-b-1" data-tooltip="Bolt 2/3 — roll zero 3 times and lose 100 pts." aria-label="Bolt 2 of 3">⚡</span>
+          <span class="scale-bolt-pip" id="bolt-b-2" data-tooltip="Bolt 3/3 — roll zero 3 times and lose 100 pts." aria-label="Bolt 3 of 3">⚡</span>
+        </div>
+        <div class="scale-thermo-wrap">
+          <div class="scale-tube-housing">
+            <div class="scale-track" id="track-bot">
+              <div class="scale-fill" id="fill-bot">
+                <div class="scale-barrel-crown" id="crown-bot"></div>
+              </div>
+              <div class="scale-score-marker marker-right" id="marker-bot" aria-label="Bot score">0</div>
+            </div>
+          </div>
+          <div class="scale-labels-col" id="labels-bot"></div>
+        </div>
+        <div class="scale-lock-wrap" id="lock-bot-wrap" role="status">
+          <div class="scale-lock" id="lock-bot" aria-label="Bot lock status"></div>
+          <div class="scale-lock-label" id="scale-bot-status">Locked</div>
+          <div class="scale-lock-sub" id="scale-bot-sub"></div>
+        </div>
+        <div class="scale-bolts" id="scale-bot-bolts" style="display:none"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- GAME OVER INLINE -->
+  <div id="overlay-gameover" class="overlay hidden">
+    <div class="overlay-card">
+      <div class="overlay-icon" id="gameover-icon">🏆</div>
+      <h2 id="gameover-title">You Win!</h2>
+      <p id="gameover-message">Congratulations!</p>
+      <button class="btn-primary" id="btn-play-again">Play Again</button>
+    </div>
+  </div>
+
+  <!-- TOOLTIP -->
+  <div id="tooltip"></div>
+
+  <!-- AUTH OVERLAY -->
+  <div id="auth-overlay"></div>
+
+  <!-- AUTH MODAL -->
+  <div id="auth-modal" role="dialog" aria-modal="true" aria-label="Account">
+    <button id="auth-close" aria-label="Close">&times;</button>
+
+    <!-- Tabs -->
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="auth-tab-signup">Sign Up</button>
+      <button class="auth-tab" id="auth-tab-login">Log In</button>
+    </div>
+
+    <!-- Sign Up panel -->
+    <div id="auth-panel-signup" class="auth-panel">
+      <form id="auth-signup-form" novalidate>
+        <label class="auth-label" for="signup-username">Username</label>
+        <input class="auth-input" id="signup-username" type="text" placeholder="Your display name" maxlength="20" autocomplete="username" />
+        <label class="auth-label" for="signup-email">Email</label>
+        <input class="auth-input" id="signup-email" type="email" placeholder="you@example.com" autocomplete="email" />
+        <label class="auth-label" for="signup-password">Password</label>
+        <input class="auth-input" id="signup-password" type="password" placeholder="At least 6 characters" autocomplete="new-password" />
+        <label class="auth-label" for="signup-password2">Confirm Password</label>
+        <input class="auth-input" id="signup-password2" type="password" placeholder="Repeat password" autocomplete="new-password" />
+        <p id="signup-error" class="auth-error"></p>
+        <button class="auth-submit" id="signup-submit" type="submit" data-label="Create Account">Create Account</button>
+      </form>
+    </div>
+
+    <!-- Log In panel -->
+    <div id="auth-panel-login" class="auth-panel" style="display:none">
+      <form id="auth-login-form" novalidate>
+        <label class="auth-label" for="login-email">Email</label>
+        <input class="auth-input" id="login-email" type="email" placeholder="you@example.com" autocomplete="email" />
+        <label class="auth-label" for="login-password">Password</label>
+        <input class="auth-input" id="login-password" type="password" placeholder="Your password" autocomplete="current-password" />
+        <p id="login-error" class="auth-error"></p>
+        <button class="auth-submit" id="login-submit" type="submit" data-label="Log In">Log In</button>
+        <button type="button" class="auth-text-btn" id="auth-forgot-link">Forgot password?</button>
+      </form>
+    </div>
+
+    <!-- Forgot Password panel -->
+    <div id="auth-panel-reset" class="auth-panel" style="display:none">
+      <form id="auth-reset-form" novalidate>
+        <p class="auth-reset-hint">Enter your email and we'll send you a reset link.</p>
+        <label class="auth-label" for="reset-email">Email</label>
+        <input class="auth-input" id="reset-email" type="email" placeholder="you@example.com" autocomplete="email" />
+        <p id="reset-error" class="auth-error"></p>
+        <button class="auth-submit" id="reset-submit" type="submit" data-label="Send Reset Email">Send Reset Email</button>
+        <button type="button" class="auth-text-btn" id="auth-back-link">&larr; Back to Log In</button>
+      </form>
+    </div>
+  </div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
