@@ -258,6 +258,50 @@ body::after {
   box-shadow: 0 2px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.2);
 }
 
+/* Lobby rows */
+.lobby-row {
+  position: relative; z-index: 2;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; width: 100%; padding: 4px 0;
+}
+.lobby-row-label {
+  font-family: 'Crimson Pro', serif;
+  font-size: 14px; color: var(--cream);
+}
+/* Hints toggle */
+.lobby-toggle {
+  position: relative;
+  width: 44px; height: 24px;
+  border-radius: 12px; border: none;
+  background: var(--status-bad);
+  cursor: pointer; transition: background 0.25s;
+  flex-shrink: 0; padding: 0;
+}
+.lobby-toggle[aria-checked="true"] { background: var(--status-good); }
+.lobby-toggle-knob {
+  position: absolute;
+  top: 3px; left: 3px;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--cream);
+  transition: transform 0.25s;
+  pointer-events: none;
+}
+.lobby-toggle[aria-checked="true"] .lobby-toggle-knob { transform: translateX(20px); }
+/* Replay tutorial text button */
+.lobby-text-btn {
+  background: transparent;
+  color: var(--brass-dim);
+  border: 1px solid var(--brass-dim);
+  border-radius: 6px;
+  padding: 4px 14px;
+  font-family: 'Crimson Pro', serif;
+  font-size: 13px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.lobby-text-btn:hover { color: var(--brass-light); border-color: var(--brass-light); }
+
 /* CTA button */
 .btn-primary {
   width: 100%; padding: 14px; border-radius: 10px;
@@ -1639,7 +1683,6 @@ body::after {
 }
 #btn-play-again-inline:hover { transform: scale(1.04); }
 #btn-play-again-inline:active { transform: scale(0.97); }
-#btn-play-again-inline.visible { display: block; }
 
 /* Exit to lobby button */
 #btn-exit-to-lobby {

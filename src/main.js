@@ -109,6 +109,17 @@ var btnPlayAgain   = document.getElementById('btn-play-again');
 var btnPlayAgainInline = document.getElementById('btn-play-again-inline');
 var btnExitToLobby    = document.getElementById('btn-exit-to-lobby');
 var endGameButtons    = document.getElementById('end-game-buttons');
+
+// ─── LOBBY REFS ────────────────────────────────────────────────────────────────────────
+var lobbyPanel       = document.getElementById('lobby-panel');
+var lobbyUsername    = document.getElementById('lobby-username');
+var lobbyNameInput   = document.getElementById('lobby-name-input');
+var lobbyHintsToggle = document.getElementById('lobby-hints-toggle');
+var lobbyReplayRow   = document.getElementById('lobby-replay-row');
+var lobbyReplayBtn   = document.getElementById('lobby-replay-btn');
+var lobbyPlayBtn     = document.getElementById('lobby-play-btn');
+var lobbyLogoutBtn   = document.getElementById('lobby-logout-btn');
+var lobbyDiffBtns    = document.querySelectorAll('#lobby-panel .diff-btn');
 var tooltipEl      = document.getElementById('tooltip');
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
@@ -214,12 +225,91 @@ document.querySelectorAll('.diff-btn').forEach(function(btn) {
 // ─── START GAME ───────────────────────────────────────────────────────────────
 // Entry is now via auth — startGame() is called from onEntryAuth()
 
+// ─── LOBBY ──────────────────────────────────────────────────────────────────────────────
+
+function showLobby() {
+  // Hide auth panels, show lobby panel
+  var authPanels = document.querySelectorAll('.entry-auth-panel, .entry-auth-tabs');
+  authPanels.forEach(function(el) { el.style.display = 'none'; });
+  if (lobbyPanel) lobbyPanel.style.display = 'block';
+
+  // Pre-fill username
+  var username = currentUser ? (currentUser.user_metadata?.username || currentUser.email || '') : '';
+  if (lobbyUsername) lobbyUsername.textContent = username || 'Player';
+  if (lobbyNameInput) lobbyNameInput.value = username;
+
+  // Sync hints toggle
+  var hintsOn = currentUser ? (currentUser.user_metadata?.hints_enabled ?? true) : true;
+  if (lobbyHintsToggle) lobbyHintsToggle.setAttribute('aria-checked', hintsOn ? 'true' : 'false');
+
+  // Show replay tutorial row only if tutorial completed
+  var tutDone = currentUser ? (currentUser.user_metadata?.tutorial_completed ?? false) : false;
+  if (lobbyReplayRow) lobbyReplayRow.style.display = tutDone ? 'flex' : 'none';
+
+  // Switch to name screen
+  screenGame.classList.remove('active');
+  screenName.classList.add('active');
+}
+
+// Difficulty selection
+lobbyDiffBtns.forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    lobbyDiffBtns.forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    difficulty = btn.dataset.diff;
+  });
+});
+
+// Hints toggle
+if (lobbyHintsToggle) lobbyHintsToggle.addEventListener('click', async function() {
+  var current = lobbyHintsToggle.getAttribute('aria-checked') === 'true';
+  var next = !current;
+  lobbyHintsToggle.setAttribute('aria-checked', next ? 'true' : 'false');
+  await setHintsEnabled(next);
+});
+
+// Replay tutorial
+if (lobbyReplayBtn) lobbyReplayBtn.addEventListener('click', async function() {
+  await replayTutorial();
+  if (lobbyReplayRow) lobbyReplayRow.style.display = 'none';
+});
+
+// Play button
+if (lobbyPlayBtn) lobbyPlayBtn.addEventListener('click', async function() {
+  // Save name if changed
+  var newName = lobbyNameInput ? lobbyNameInput.value.trim() : '';
+  if (newName && newName !== playerName && currentUser) {
+    playerName = newName;
+    if (lobbyUsername) lobbyUsername.textContent = newName;
+    try {
+      await supabase.auth.updateUser({ data: { username: newName } });
+      if (currentUser.user_metadata) currentUser.user_metadata.username = newName;
+    } catch(e) { console.warn('Name save failed:', e); }
+  }
+  screenName.classList.remove('active');
+  screenGame.classList.add('active');
+  startGame();
+});
+
+// Log out
+if (lobbyLogoutBtn) lobbyLogoutBtn.addEventListener('click', async function() {
+  await supabase.auth.signOut();
+  // Hide lobby, show auth panels
+  if (lobbyPanel) lobbyPanel.style.display = 'none';
+  var authPanels = document.querySelectorAll('.entry-auth-panel, .entry-auth-tabs');
+  authPanels.forEach(function(el) { el.style.removeProperty('display'); });
+  screenGame.classList.remove('active');
+  screenName.classList.add('active');
+  currentUser = null;
+  updateAuthUI(null);
+});
+
+// ────────────────────────────────────────────────────────────────────────────────
 async function startGame() {
   game = createGame([playerName, 'Bot'], 'classic');
   turnCounter = 0;
 
   // Reset end-of-game UI
-  btnPlayAgainInline.classList.remove('visible');
   if (endGameButtons) endGameButtons.classList.remove('visible');
   document.getElementById('action-buttons').style.display = '';
   var guestPrompt = document.getElementById('auth-guest-prompt');
@@ -1188,9 +1278,7 @@ if (btnExitToLobby) btnExitToLobby.addEventListener('click', function() {
   if (endGameButtons) endGameButtons.classList.remove('visible');
   document.getElementById('action-buttons').style.display = '';
   hideEmailCapture();
-  // Return to lobby (name screen) — keep user logged in
-  screenGame.classList.remove('active');
-  screenName.classList.add('active');
+  showLobby();
 });
 
 if (btnPlayAgain) btnPlayAgain.addEventListener('click', function() {
@@ -1346,8 +1434,7 @@ document.addEventListener('touchstart', function(e) {
     updateAuthUI(user);
     var username = user.user_metadata?.username || user.email || 'Player';
     playerName = username;
-    if (inputName) inputName.value = username;
-    startGame();
+    showLobby();
   }
 
   // Init modal + entry screen listeners
@@ -1387,9 +1474,9 @@ document.addEventListener('touchstart', function(e) {
       var username = currentUser.user_metadata?.username || currentUser.email || 'Player';
       playerName = username;
       if (inputName) inputName.value = username;
-      // Only auto-start if a game isn't already running (guards against token-refresh reloads)
+      // Only auto-start if a game isn't already running
       if (!game) {
-        startGame(); // skip entry screen entirely
+        showLobby();
       }
     } else {
       updateAuthUI(null);

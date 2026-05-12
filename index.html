@@ -109,10 +109,60 @@
 
       <div class="card-divider"></div>
 
-      <div class="difficulty-row">
-        <span class="diff-label">Opponent Skill:</span>
-        <button class="diff-btn active" data-diff="easy">Easy</button>
-        <button class="diff-btn" data-diff="hard">Hard</button>
+      <!-- LOBBY (shown after login) -->
+      <div id="lobby-panel" style="display:none; width:100%; position:relative; z-index:2">
+
+        <!-- Welcome header -->
+        <div id="lobby-welcome" style="text-align:center; margin-bottom:4px">
+          <p style="font-family:'Crimson Pro',serif; font-size:13px; letter-spacing:0.1em; text-transform:uppercase; color:var(--brass-dim)">Welcome back</p>
+          <p id="lobby-username" style="font-family:'Playfair Display',serif; font-size:22px; font-weight:700; color:var(--gold-light); margin:2px 0 0">Player</p>
+        </div>
+
+        <div class="card-divider" style="margin:8px 0"></div>
+
+        <!-- Editable name -->
+        <div class="name-form" style="margin-bottom:4px">
+          <label for="lobby-name-input">Display Name</label>
+          <div class="input-wrap">
+            <span class="input-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </span>
+            <input id="lobby-name-input" type="text" placeholder="Your display name" maxlength="20" autocomplete="off" />
+          </div>
+        </div>
+
+        <!-- Difficulty -->
+        <div class="difficulty-row" style="margin-bottom:4px">
+          <span class="diff-label">Difficulty:</span>
+          <button class="diff-btn active" data-diff="easy" id="lobby-diff-easy">Easy</button>
+          <button class="diff-btn" data-diff="medium" id="lobby-diff-medium">Medium</button>
+          <button class="diff-btn" data-diff="hard" id="lobby-diff-hard">Hard</button>
+        </div>
+
+        <div class="card-divider" style="margin:8px 0"></div>
+
+        <!-- Hints toggle -->
+        <div class="lobby-row">
+          <span class="lobby-row-label">Game Hints</span>
+          <button id="lobby-hints-toggle" class="lobby-toggle" role="switch" aria-checked="true">
+            <span class="lobby-toggle-knob"></span>
+          </button>
+        </div>
+
+        <!-- Replay Tutorial (only shown if tutorial completed) -->
+        <div class="lobby-row" id="lobby-replay-row" style="display:none">
+          <span class="lobby-row-label">Replay Tutorial</span>
+          <button id="lobby-replay-btn" class="lobby-text-btn">Reset</button>
+        </div>
+
+        <div class="card-divider" style="margin:8px 0"></div>
+
+        <!-- Play button -->
+        <button id="lobby-play-btn" class="auth-submit">Play</button>
+
+        <!-- Log out -->
+        <button id="lobby-logout-btn" class="auth-text-btn" style="margin-top:4px">Log Out</button>
+
       </div>
 
       <div class="corner-ornament top-left">♦</div>
