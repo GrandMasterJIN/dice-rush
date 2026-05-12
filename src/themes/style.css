@@ -1611,9 +1611,18 @@ body::after {
 /* Inline Play Again button */
 #action-buttons-spacer { display: none; }
 
+/* End-game button row */
+#end-game-buttons {
+  display: none;
+  gap: 8px;
+  width: 100%;
+}
+#end-game-buttons.visible { display: flex; }
+
 /* Inline Play Again button */
 #btn-play-again-inline {
-  display: none;
+  display: block;
+  flex: 3;
   width: 100%;
   padding: 14px 8px;
   font-family: 'Playfair Display', serif;
@@ -1628,9 +1637,28 @@ body::after {
   box-shadow: 0 4px 16px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.2);
   transition: transform 0.15s, opacity 0.2s;
 }
-#btn-play-again-inline:hover  { transform: scale(1.04); }
+#btn-play-again-inline:hover { transform: scale(1.04); }
 #btn-play-again-inline:active { transform: scale(0.97); }
 #btn-play-again-inline.visible { display: block; }
+
+/* Exit to lobby button */
+#btn-exit-to-lobby {
+  flex: 1;
+  padding: 14px 8px;
+  font-family: 'Playfair Display', serif;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: transparent;
+  color: var(--brass-light);
+  border: 2px solid var(--brass-dim);
+  border-radius: 30px;
+  cursor: pointer;
+  transition: transform 0.15s, border-color 0.2s, color 0.2s;
+}
+#btn-exit-to-lobby:hover  { border-color: var(--brass-light); color: var(--cream); transform: scale(1.02); }
+#btn-exit-to-lobby:active { transform: scale(0.97); }
 
 /* ──────────────────────────────────────────────────────────────────────
    Driver.js popover — oak/brass theme
@@ -2191,28 +2219,11 @@ body::after {
   gap: 6px;
 }
 
-/* Gear button */
-#btn-settings {
-  display: none;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background: rgba(0,0,0,0.4);
-  border: 1px solid rgba(200,144,32,0.35);
-  color: var(--brass-dim);
-  font-size: 16px;
-  line-height: 1;
-  cursor: pointer;
-  align-items: center;
-  justify-content: center;
-  transition: color 0.2s, border-color 0.2s, background 0.2s;
-}
-#btn-settings.visible { display: flex; }
-#btn-settings:hover {
-  color: var(--brass-light);
-  border-color: var(--brass-mid);
-  background: rgba(200,144,32,0.1);
-}
+/* Gear button — hidden until settings modal has enough content */
+#btn-settings { display: none !important; }
+
+/* Settings modal — hidden until settings modal has enough content */
+#settings-overlay { display: none !important; }
 #auth-badge {
   display: none;
   width: 34px;

@@ -64,7 +64,6 @@ export function hideAuthModal() {
 
 export function updateAuthUI(user) {
   var badge        = document.getElementById('auth-badge');
-  var btnSettings  = document.getElementById('btn-settings');
   var loginLinks   = document.getElementById('auth-name-links');
   var guestPrompt  = document.getElementById('auth-guest-prompt');
 
@@ -72,12 +71,10 @@ export function updateAuthUI(user) {
     var username = user.user_metadata?.username || user.email || '?';
     var initials = username.slice(0, 2).toUpperCase();
     if (badge)       { badge.textContent = initials; badge.classList.add('visible'); }
-    if (btnSettings) btnSettings.classList.add('visible');
     if (loginLinks)  loginLinks.style.display = 'none';
     if (guestPrompt) guestPrompt.style.display = 'none';
   } else {
     if (badge)       badge.classList.remove('visible');
-    if (btnSettings) btnSettings.classList.remove('visible');
     if (loginLinks)  loginLinks.style.display = 'flex';
     if (guestPrompt) guestPrompt.style.display = 'flex';
   }

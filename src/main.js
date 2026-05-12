@@ -107,12 +107,8 @@ var gameoverTitle  = document.getElementById('gameover-title');
 var gameoverMsg    = document.getElementById('gameover-message');
 var btnPlayAgain   = document.getElementById('btn-play-again');
 var btnPlayAgainInline = document.getElementById('btn-play-again-inline');
-var btnSettings        = document.getElementById('btn-settings');
-var settingsOverlay    = document.getElementById('settings-overlay');
-var hintsToggle        = document.getElementById('hints-toggle');
-var replayRow          = document.getElementById('replay-row');
-var btnReplayTutorial  = document.getElementById('btn-replay-tutorial');
-var btnSettingsClose   = document.getElementById('btn-settings-close');
+var btnExitToLobby    = document.getElementById('btn-exit-to-lobby');
+var endGameButtons    = document.getElementById('end-game-buttons');
 var tooltipEl      = document.getElementById('tooltip');
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
@@ -224,6 +220,7 @@ async function startGame() {
 
   // Reset end-of-game UI
   btnPlayAgainInline.classList.remove('visible');
+  if (endGameButtons) endGameButtons.classList.remove('visible');
   document.getElementById('action-buttons').style.display = '';
   var guestPrompt = document.getElementById('auth-guest-prompt');
   if (guestPrompt) guestPrompt.style.display = 'none';
@@ -1151,9 +1148,9 @@ function showGameOver(humanWon) {
 
   // ── Step 4: save score or show guest prompt ──
   setTimeout(function() {
-    // Hide action buttons, show Play Again in their place
+    // Hide action buttons, show end-game buttons (Play Again + Exit)
     document.getElementById('action-buttons').style.display = 'none';
-    btnPlayAgainInline.classList.add('visible');
+    if (endGameButtons) endGameButtons.classList.add('visible');
 
     if (currentUser) {
       // Logged in — save score silently
@@ -1181,10 +1178,19 @@ function showGameOver(humanWon) {
 }
 
 btnPlayAgainInline.addEventListener('click', function() {
-  btnPlayAgainInline.classList.remove('visible');
+  if (endGameButtons) endGameButtons.classList.remove('visible');
   document.getElementById('action-buttons').style.display = '';
   hideEmailCapture();
   startGame();
+});
+
+if (btnExitToLobby) btnExitToLobby.addEventListener('click', function() {
+  if (endGameButtons) endGameButtons.classList.remove('visible');
+  document.getElementById('action-buttons').style.display = '';
+  hideEmailCapture();
+  // Return to lobby (name screen) — keep user logged in
+  screenGame.classList.remove('active');
+  screenName.classList.add('active');
 });
 
 if (btnPlayAgain) btnPlayAgain.addEventListener('click', function() {
@@ -1195,45 +1201,7 @@ if (btnPlayAgain) btnPlayAgain.addEventListener('click', function() {
 });
 
 // ─── TOOLTIP (P3-A: hybrid hover + touch) ────────────────────────────────────
-// ─── SETTINGS MODAL ─────────────────────────────────────────────────────────────────────────────
 
-function openSettings() {
-  if (!currentUser) return;
-  var hintsOn = getHintsEnabled();
-  hintsToggle.setAttribute('aria-checked', hintsOn ? 'true' : 'false');
-  if (replayRow) replayRow.style.display = getTutorialCompleted() ? 'flex' : 'none';
-  settingsOverlay.classList.add('visible');
-}
-
-function closeSettings() {
-  settingsOverlay.classList.remove('visible');
-}
-
-if (btnSettings) btnSettings.addEventListener('click', function(e) {
-  e.stopPropagation();
-  var dropdown = document.getElementById('auth-dropdown');
-  if (dropdown) dropdown.classList.remove('visible');
-  openSettings();
-});
-
-if (btnSettingsClose) btnSettingsClose.addEventListener('click', closeSettings);
-
-if (settingsOverlay) settingsOverlay.addEventListener('click', function(e) {
-  if (e.target === settingsOverlay) closeSettings();
-});
-
-if (hintsToggle) hintsToggle.addEventListener('click', async function() {
-  var current = hintsToggle.getAttribute('aria-checked') === 'true';
-  var next = !current;
-  hintsToggle.setAttribute('aria-checked', next ? 'true' : 'false');
-  await setHintsEnabled(next);
-});
-
-if (btnReplayTutorial) btnReplayTutorial.addEventListener('click', async function() {
-  await replayTutorial();
-  closeSettings();
-  setMessage('🎓 Tutorial reset — it will start fresh on your next game.', 'hint');
-});
 
 var tooltipDismissTimer = null;
 
