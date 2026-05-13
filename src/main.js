@@ -967,6 +967,7 @@ function renderScales() {
   if (!game) return;
   updateScale(fillHuman, scaleHumanScore, scaleHumanStatus, scaleBoltsH, sBoltsH, game.players[0], markerHuman);
   updateScale(fillBot,   scaleBotScore,   scaleBotStatus,   scaleBoltsB, sBoltsB, game.players[1], markerBot);
+  renderStrips();
 }
 
 function updateScale(fillEl, scoreLabel, statusLabel, scaleBolts, topBolts, player, markerEl) {
@@ -1090,6 +1091,94 @@ function renderTurnInfo() {
   if (turnLabel)      turnLabel.textContent      = isHuman ? 'Your Turn' : "Bot's Turn";
   if (turnScoreEl)    turnScoreEl.textContent    = ts > 0 ? '+' + ts : '';
   if (turnRoundLabel) turnRoundLabel.textContent = 'Turn ' + turnCounter;
+}
+
+// ─── MOBILE STRIPS ─────────────────────────────────────────────────────────────────────────
+function renderStrips() {
+  if (!game) return;
+  var players = [
+    { player: game.players[0], stripEl: document.getElementById('strip-human'),
+      fillEl: document.getElementById('strip-human-fill'),
+      markerEl: document.getElementById('strip-human-marker'),
+      scoreEl: document.getElementById('strip-human-score'),
+      lockEl: document.getElementById('strip-human-lock'),
+      lockLabelEl: document.getElementById('strip-human-lock-label'),
+      boltsEl: document.getElementById('strip-human-bolts'),
+      pit1El: document.getElementById('strip-human-pit1'),
+      pit2El: document.getElementById('strip-human-pit2'),
+      barrelEl: document.getElementById('strip-human-barrel'),
+      nameEl: document.getElementById('strip-human-name'),
+    },
+    { player: game.players[1], stripEl: document.getElementById('strip-bot'),
+      fillEl: document.getElementById('strip-bot-fill'),
+      markerEl: document.getElementById('strip-bot-marker'),
+      scoreEl: document.getElementById('strip-bot-score'),
+      lockEl: document.getElementById('strip-bot-lock'),
+      lockLabelEl: document.getElementById('strip-bot-lock-label'),
+      boltsEl: document.getElementById('strip-bot-bolts'),
+      pit1El: document.getElementById('strip-bot-pit1'),
+      pit2El: document.getElementById('strip-bot-pit2'),
+      barrelEl: document.getElementById('strip-bot-barrel'),
+      nameEl: document.getElementById('strip-bot-name'),
+    },
+  ];
+
+  players.forEach(function(p, idx) {
+    if (!p.stripEl || !p.player) return;
+    var score   = p.player.score || 0;
+    var pct     = Math.min(score / 1000, 1) * 100;
+
+    // Score fill + marker
+    if (p.fillEl)   p.fillEl.style.width = pct + '%';
+    if (p.markerEl) p.markerEl.style.left = pct + '%';
+    if (p.scoreEl)  p.scoreEl.textContent = score;
+
+    // Name
+    if (p.nameEl) p.nameEl.textContent = p.player.name || (idx === 0 ? playerName : 'Bot');
+
+    // Bolts
+    var bolts = p.player.bolts || 0;
+    if (p.boltsEl) {
+      var boltHtml = '';
+      for (var b = 0; b < 3; b++) {
+        boltHtml += '<span style="opacity:' + (b < bolts ? '1' : '0.2') + '">⚡</span>';
+      }
+      p.boltsEl.innerHTML = boltHtml;
+    }
+
+    // State
+    var inPit1   = score >= CONFIG.PIT1_MIN && score <= CONFIG.PIT1_MAX;
+    var inPit2   = score >= CONFIG.PIT2_MIN && score <= CONFIG.PIT2_MAX;
+    var onBarrel = p.player.isOnBarrel;
+    var isOpen   = p.player.isOpen;
+
+    p.stripEl.classList.remove('state-pit', 'state-barrel', 'state-open');
+    if (onBarrel) {
+      p.stripEl.classList.add('state-barrel');
+      if (p.lockEl)      p.lockEl.textContent = '🛢';
+      if (p.lockLabelEl) p.lockLabelEl.textContent = 'Barrel';
+    } else if (inPit1 || inPit2) {
+      p.stripEl.classList.add('state-pit');
+      if (p.lockEl)      p.lockEl.textContent = '⛏';
+      if (p.lockLabelEl) p.lockLabelEl.textContent = inPit1 ? 'Pit 1' : 'Pit 2';
+    } else if (isOpen) {
+      p.stripEl.classList.add('state-open');
+      if (p.lockEl)      p.lockEl.textContent = '🔓';
+      if (p.lockLabelEl) p.lockLabelEl.textContent = 'Open';
+    } else {
+      if (p.lockEl)      p.lockEl.textContent = '🔒';
+      if (p.lockLabelEl) p.lockLabelEl.textContent = 'Locked';
+    }
+
+    // Zone active highlights
+    if (p.pit1El)   p.pit1El.classList.toggle('active', inPit1);
+    if (p.pit2El)   p.pit2El.classList.toggle('active', inPit2);
+    if (p.barrelEl) p.barrelEl.classList.toggle('active', !!onBarrel);
+
+    // Active turn
+    var isCurrentPlayer = (idx === game.currentPlayerIndex);
+    p.stripEl.classList.toggle('active-turn', isCurrentPlayer);
+  });
 }
 
 function renderAll() {

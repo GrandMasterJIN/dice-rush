@@ -1781,12 +1781,229 @@ body::after {
 }
 .dr-btn-skip:hover { color: var(--brass-light); border-color: var(--brass-light); }
 
+/* ──────────────────────────────────────────────────────────────────────
+   Mobile strips — hidden on desktop, shown ≤480px
+────────────────────────────────────────────────────────────────────── */
+.mobile-strip { display: none; }
+
+@media (max-width: 480px) {
+  /* Hide desktop side columns */
+  #scale-human-col,
+  #scale-bot-col { display: none !important; }
+
+  /* Game layout — full height column, score strips on top */
+  #game-layout {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    padding: 0;
+    gap: 0;
+    height: 100%;
+  }
+
+  /* Center panel fills remaining height */
+  #center-panel { width: 100%; min-width: 0; order: 1; flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+
+  /* Screen fills full viewport */
+  #screen-game { height: 100dvh; overflow: hidden; }
+
+  /* Table frame and inner stretch to fill */
+  #table-frame { flex: 1; border-radius: 8px; padding: 4px; display: flex; flex-direction: column; min-height: 0; }
+  #table-inner {
+    justify-content: flex-start;
+    padding: 4px 6px 6px;
+    flex: 1;
+    min-height: 0;
+  }
+
+  /* Dice area fills remaining space */
+  #dice-area { flex: 1; min-height: 0; }
+
+  /* Both strips in one header block at the top */
+  #strip-human,
+  #strip-bot {
+    display: block;
+    width: 100%;
+    background: rgba(6,2,0,0.95);
+    padding: 8px 12px 10px;
+    box-sizing: border-box;
+    border: none;
+    order: 0;
+  }
+  #strip-human {
+    border-bottom: 1px solid rgba(138,92,26,0.4);
+  }
+  #strip-bot {
+    border-bottom: 2px solid rgba(138,92,26,0.5);
+  }
+
+  /* Top row */
+  .strip-top-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 5px;
+    font-family: 'Crimson Pro', serif;
+  }
+  .strip-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--brass-light);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    flex-shrink: 0;
+    min-width: 70px;
+  }
+  .strip-lock { font-size: 13px; flex-shrink: 0; }
+  .strip-lock-label {
+    font-size: 12px;
+    color: var(--brass-dim);
+    flex-shrink: 0;
+  }
+  .strip-bolts {
+    font-size: 11px;
+    flex: 1;
+    text-align: center;
+    letter-spacing: 2px;
+    opacity: 0.8;
+  }
+  .strip-score {
+    font-family: 'Playfair Display', serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--gold-light);
+    flex-shrink: 0;
+    min-width: 44px;
+    text-align: right;
+  }
+
+  /* Progress bar */
+  .strip-bar-wrap { width: 100%; }
+  .strip-bar-track {
+    position: relative;
+    width: 100%;
+    height: 16px;
+    background: #1a1a0a;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid rgba(200,144,32,0.15);
+  }
+
+  /* Zone bands — always visible, proportional to 1000pt scale */
+  .strip-zone {
+    position: absolute;
+    top: 0; height: 100%;
+    display: flex; align-items: center;
+    justify-content: center;
+    font-size: 0;        /* hide text by default */
+    font-family: 'Crimson Pro', serif;
+    color: rgba(255,255,255,0.9);
+    white-space: nowrap;
+    overflow: hidden;
+    z-index: 2;
+  }
+  /* Pit 1: 200–300 = 20%–30% */
+  .strip-pit1   { left: 20%; width: 10%; background: rgba(107,21,21,0.7); }
+  /* Pit 2: 600–700 = 60%–70% */
+  .strip-pit2   { left: 60%; width: 10%; background: rgba(107,21,21,0.7); }
+  /* Barrel: 900–1000 = 90%–100% */
+  .strip-barrel { left: 90%; width: 10%; background: rgba(122,80,16,0.7); border-radius: 0 6px 6px 0; }
+
+  /* Show zone label text only when active */
+  .strip-zone.active { font-size: 8px; font-weight: 600; opacity: 1; }
+  .strip-pit1.active,
+  .strip-pit2.active   { background: rgba(139,26,26,0.95); }
+  .strip-barrel.active { background: rgba(140,100,20,0.95); }
+
+  /* Score fill */
+  .strip-fill {
+    position: absolute;
+    top: 0; left: 0;
+    height: 100%;
+    background: linear-gradient(90deg, #1a5c1a, #2a8a2a);
+    border-radius: 6px;
+    transition: width 0.4s ease;
+    z-index: 1;
+  }
+
+  /* Score marker dot */
+  .strip-marker {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #4aaa4a;
+    border: 1.5px solid rgba(255,255,255,0.8);
+    z-index: 3;
+    transition: left 0.4s ease;
+  }
+
+  /* Active turn highlight */
+  .mobile-strip.active-turn .strip-name { color: var(--gold-bright); }
+  .mobile-strip.active-turn .strip-score { color: var(--gold-bright); }
+
+  /* Pit state */
+  .mobile-strip.state-pit .strip-fill { background: linear-gradient(90deg, #5a1010, #8b1a1a); }
+  .mobile-strip.state-pit .strip-marker { background: #cc3333; }
+  .mobile-strip.state-pit .strip-lock-label { color: #ff8080; }
+  .mobile-strip.state-pit .strip-lock { color: #ff8080; }
+
+  /* Barrel state */
+  .mobile-strip.state-barrel .strip-fill { background: linear-gradient(90deg, #5a3a00, #8a6010); }
+  .mobile-strip.state-barrel .strip-marker { background: #ffb840; }
+  .mobile-strip.state-barrel .strip-lock-label { color: #ffb840; }
+
+  /* Open state */
+  .mobile-strip.state-open .strip-lock-label { color: #80ff80; }
+  .mobile-strip.state-open .strip-lock { color: #80ff80; }
+
+  /* Bank button — truly hidden when not available */
+  .btn-bank {
+    display: none;
+  }
+  #action-buttons.bank-available .btn-bank {
+    display: block;
+    flex: 2;
+  }
+
+  /* Hide auth badge on mobile — no room */
+  #auth-badge-wrap { display: none !important; }
+
+  /* Hide session logger export button — dev tool only */
+  #btn-export-log { display: none !important; }
+
+  /* Action buttons full width, no overflow */
+  #action-buttons {
+    display: flex;
+    width: 100%;
+    gap: 6px;
+    padding: 0;
+  }
+  #action-buttons .btn-roll,
+  #action-buttons .btn-bank {
+    flex: 1;
+    font-size: 18px;
+    padding: 14px 8px;
+  }
+
+  /* Comms panel — tighter on mobile */
+  #comms-panel {
+    height: 72px;
+  }
+  #comms-status {
+    padding: 3px 10px;
+  }
+  .comms-label { font-size: 9px; }
+  #comms-turn-num,
+  #comms-whose-turn { font-size: 13px; }
+  #comms-turn-score  { font-size: 14px; }
+  #comms-message { padding: 0 10px; }
+  #comms-text    { font-size: 15px; }
+  #comms-icon    { font-size: 14px; }
+}
+
 /* Email capture */
 #email-capture {
-  display: none;
-  align-self: center;
-  flex-direction: column;
-  align-items: center;
   gap: 8px;
   margin-top: 12px;
   padding: 14px 20px;

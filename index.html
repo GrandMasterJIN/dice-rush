@@ -298,7 +298,6 @@
                 </div>
               </div>
             </div>
-
           </div>
         </div>
       </div>
@@ -329,6 +328,45 @@
           <div class="scale-lock-sub" id="scale-bot-sub"></div>
         </div>
         <div class="scale-bolts" id="scale-bot-bolts" style="display:none"></div>
+      </div>
+
+      <!-- MOBILE STRIPS (hidden on desktop, shown on mobile) -->
+      <div id="strip-human" class="mobile-strip">
+        <div class="strip-top-row">
+          <span class="strip-name" id="strip-human-name">You</span>
+          <span class="strip-lock" id="strip-human-lock">🔒</span>
+          <span class="strip-lock-label" id="strip-human-lock-label">Locked</span>
+          <span class="strip-bolts" id="strip-human-bolts">⚡⚡⚡</span>
+          <span class="strip-score" id="strip-human-score">0</span>
+        </div>
+        <div class="strip-bar-wrap">
+          <div class="strip-bar-track">
+            <div class="strip-zone strip-barrel" id="strip-human-barrel"><span>🛢 Barrel</span></div>
+            <div class="strip-zone strip-pit2" id="strip-human-pit2"><span>⛏ Pit 2</span></div>
+            <div class="strip-zone strip-pit1" id="strip-human-pit1"><span>⛏ Pit 1</span></div>
+            <div class="strip-fill" id="strip-human-fill"></div>
+            <div class="strip-marker" id="strip-human-marker"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="strip-bot" class="mobile-strip">
+        <div class="strip-top-row">
+          <span class="strip-name" id="strip-bot-name">Bot</span>
+          <span class="strip-lock" id="strip-bot-lock">🔒</span>
+          <span class="strip-lock-label" id="strip-bot-lock-label">Locked</span>
+          <span class="strip-bolts" id="strip-bot-bolts">⚡⚡⚡</span>
+          <span class="strip-score" id="strip-bot-score">0</span>
+        </div>
+        <div class="strip-bar-wrap">
+          <div class="strip-bar-track">
+            <div class="strip-zone strip-barrel" id="strip-bot-barrel"><span>🛢 Barrel</span></div>
+            <div class="strip-zone strip-pit2" id="strip-bot-pit2"><span>⛏ Pit 2</span></div>
+            <div class="strip-zone strip-pit1" id="strip-bot-pit1"><span>⛏ Pit 1</span></div>
+            <div class="strip-fill" id="strip-bot-fill"></div>
+            <div class="strip-marker" id="strip-bot-marker"></div>
+          </div>
+        </div>
       </div>
 
     </div>
