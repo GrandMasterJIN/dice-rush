@@ -7,7 +7,7 @@ import { logSessionStart, logTurnStart, logRoll, logTurnEnd, logEvent, logSessio
 import { getSession, saveScore } from './auth.js';
 import { supabase } from './supabase.js';
 import { initAuthModal, showAuthModal, updateAuthUI } from './authModal.js';
-import { initTutorial, tutorialHook, tutorialComplete, getHintsEnabled, getTutorialCompleted, setHintsEnabled, replayTutorial } from './tutorial.js';
+import { initTutorial, tutorialHook, tutorialComplete, getHintsEnabled, getTutorialCompleted, setHintsEnabled, replayTutorial, dismissHint } from './tutorial.js';
 
 // Turn counter — incremented on every turn start
 var turnCounter = 0;
@@ -59,6 +59,20 @@ var commsTurnScore = document.getElementById('comms-turn-score');
 var commsMessage   = document.getElementById('comms-message');
 var commsIcon      = document.getElementById('comms-icon');
 var commsText      = document.getElementById('comms-text');
+var commsDismiss   = document.getElementById('comms-dismiss');
+var _currentHintEvent = null; // tracks which hint event is showing, for dismiss
+if (commsDismiss) {
+  commsDismiss.style.display = 'none'; // hidden by default
+  commsDismiss.addEventListener('click', function() {
+    if (_currentHintEvent) {
+      dismissHint(_currentHintEvent);
+      _currentHintEvent = null;
+      commsDismiss.style.display = 'none';
+      setMessage('Hint dismissed — won\'t show again.', 'hint');
+      setTimeout(function() { setMessage('', 'neutral'); }, 1800);
+    }
+  });
+}
 // Toast elements (winner ceremony only)
 var toastEl       = document.getElementById('event-toast');
 var toastIconEl   = document.getElementById('toast-icon');
@@ -515,6 +529,7 @@ function handleRollResult() {
     } else {
       setMessage('⚡ Bolt ' + bolts + '/3 — turn ends.', 'warn');
       logEvent('BOLT', playerName + ' bolt ' + bolts + '/3');
+      tutorialHook('first-bolt'); // Fix 3: bolt teaching moment
     }
     logTurnEnd('bust', null, currentScores());
     tutorialHook('first-bust');
@@ -620,10 +635,15 @@ btnBank.addEventListener('click', function() {
     return;
   }
 
-  var bankedPts = game.turn.turnScore;
+  var wasOpen    = game.players[0] ? game.players[0].isOpen : false;
+  var bankedPts  = game.turn.turnScore;
   game = bankTurn(game);
   logTurnEnd('banked', bankedPts, currentScores());
   tutorialHook('first-bank');
+  // Fix 2: fire first-open only when the opening bank just happened
+  if (!wasOpen && game.players[0] && game.players[0].isOpen) {
+    tutorialHook('first-open');
+  }
 
   // Check special events
   if (game.players[0] && game.players[0].isOnBarrel) {
@@ -666,9 +686,11 @@ function handleBankResult() {
   if (lastLog.indexOf(playerName + ' overtook') !== -1 || prevLog.indexOf(playerName + ' overtook') !== -1) {
     setMessage('🗡 You overtook Bot — Bot loses 50 pts.', 'good');
     logEvent('OVERTAKE', playerName + ' overtook Bot — Bot -50 pts');
+    tutorialHook('overtake'); // Fix 4: overtake teaching moment
   } else if (lastLog.indexOf('Bot overtook') !== -1 || prevLog.indexOf('Bot overtook') !== -1) {
     setMessage('🗡 Bot overtook you — -50 pts.', 'bad');
     logEvent('OVERTAKE', 'Bot overtook ' + playerName + ' — ' + playerName + ' -50 pts');
+    tutorialHook('overtake'); // Fix 4: overtake teaching moment
   }
   var nextHuman = game.currentPlayerIndex === 0;
   setTimeout(function() {
@@ -1220,9 +1242,11 @@ function disableActions() {
   btnBank.disabled = true;
   document.getElementById('action-buttons').classList.remove('bank-available');
 }
-function setMessage(text, skin, icon) {
+function setMessage(text, skin, icon, hintEvent) {
   // skin: 'neutral'|'hint'|'good'|'warn'|'bad'|'bot'|'big'
-  // icon: optional emoji shown before text
+  // hintEvent: optional — the tutorial event key this message came from (for dismiss)
+  _currentHintEvent = hintEvent || null;
+  if (commsDismiss) commsDismiss.style.display = hintEvent ? '' : 'none';
   if (commsMessage) {
     // Strip legacy compound classes like 'bad big', 'good big', 'warn big'
     var baseSkin = (skin || 'neutral').split(' ')[0];

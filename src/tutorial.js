@@ -15,6 +15,7 @@ var _driverInst      = null;   // Driver.js instance (tutorial mode only)
 var _setMessage      = null;   // injected setMessage() from main.js
 var _seenThisSession = new Set(); // prevents hints repeating within a session
 var _stepsFired      = new Set(); // which tutorial steps have fired this game
+var _disabledHints   = new Set(); // hints permanently dismissed by user (Fix 5)
 
 // ─── INIT ────────────────────────────────────────────────────────────────────────────────
 
@@ -39,6 +40,8 @@ export function initTutorial(user, setMsgFn) {
   var meta              = user.user_metadata || {};
   var tutorialCompleted = meta.tutorial_completed ?? false;
   var hintsEnabled      = meta.hints_enabled      ?? true;
+  // Load permanently disabled hints from user_metadata (Fix 5: disable-from-tip)
+  _disabledHints = new Set(Array.isArray(meta.hints_disabled) ? meta.hints_disabled : []);
 
   if (!tutorialCompleted) {
     _tutorialMode = true;
@@ -55,8 +58,9 @@ export function initTutorial(user, setMsgFn) {
 // ─── HOOK DISPATCHER ────────────────────────────────────────────────────────────────────
 
 /**
- * Call from main.js at each of the 7 teaching moments.
- * Events: 'game-start' | 'first-roll' | 'first-bank' | 'first-bust' | 'enter-pit' | 'enter-barrel'
+ * Call from main.js at each teaching moment.
+ * Events: 'game-start' | 'first-roll' | 'first-open' | 'first-bank' | 'first-bust' |
+ *         'enter-pit' | 'enter-barrel' | 'first-bolt' | 'overtake'
  */
 export function tutorialHook(event, opts) {
   if (!_tutorialMode && !_hintsMode) return;
@@ -64,6 +68,9 @@ export function tutorialHook(event, opts) {
   _stepsFired.add(event);
 
   if (_tutorialMode) {
+    // Fix 1: also check session-level dedup in tutorial mode — prevents re-firing on Play Again
+    if (_seenThisSession.has(event)) return;
+    _seenThisSession.add(event);
     _handleTutorialStep(event, opts);
   } else {
     _handleHint(event);
@@ -78,7 +85,7 @@ function _handleTutorialStep(event, opts) {
     case 'game-start':
       _showStep({
         element:  '#btn-roll',
-        title:    '🎯 Your Goal',
+        title:    '\uD83C\uDFAF Your Goal',
         body:     'Roll the dice and score points. <strong>First to reach 1,000 wins.</strong> Press Roll to begin!',
         side:     'top',
         showSkip: true,
@@ -88,26 +95,31 @@ function _handleTutorialStep(event, opts) {
     case 'first-roll':
       _showStep({
         element: document.querySelector('.die-wrap.scored') || '#comms-panel',
-        title:   '🎲 Scoring Dice',
-        body:    'Only 1s and 5s score alone: a single 1 = 10 pts, a single 5 = 5 pts. <strong>Three of a kind unlocks big points</strong> — three 1s = 100 pts, three 5s = 50 pts, three of anything else = face × 10. Bank to keep your points — or roll again for more!',
+        title:   '\uD83C\uDFB2 Scoring Dice',
+        body:    'Only 1s and 5s score alone: a single 1 = 10 pts, a single 5 = 5 pts. <strong>Three of a kind unlocks big points</strong> \u2014 three 1s = 100 pts, three 5s = 50 pts, three of anything else = face \xD7 10. Bank to keep your points \u2014 or roll again for more!',
+        side:    'top',
+      });
+      break;
+
+    // Fix 2: first-open fires specifically when the opening bank happens (isOpen transition)
+    case 'first-open':
+      _showStep({
+        element: '#lock-human-wrap',
+        title:   '\uD83D\uDD13 You\'re Open!',
+        body:    'Banking saved your points and <strong>opened your account.</strong> Watch your score climb the thermometer. You needed 50+ pts to open \u2014 done!',
         side:    'top',
       });
       break;
 
     case 'first-bank':
-      _showStep({
-        element: '#lock-human-wrap',
-        title:   '🔓 You\'re Open!',
-        body:    'Banking saved your points and <strong>opened your account.</strong> Watch your score climb the thermometer. You needed 50+ pts to open — done!',
-        side:    'top',
-      });
+      // Generic bank — teaching moment handled by first-open on the opening bank
       break;
 
     case 'first-bust':
       _showStep({
         element: '#comms-panel',
-        title:   '💥 Bust!',
-        body:    '<strong>No scoring dice</strong> — you lose all points earned this turn. The turn passes to your opponent. It happens to everyone!',
+        title:   '\uD83D\uDCA5 Bust!',
+        body:    '<strong>No scoring dice</strong> \u2014 you lose all points earned this turn. The turn passes to your opponent. It happens to everyone!',
         side:    'top',
       });
       break;
@@ -115,9 +127,9 @@ function _handleTutorialStep(event, opts) {
     case 'enter-pit':
       _showStep({
         element: '#lock-human-wrap',
-        title:   '⛏ You\'re in a Pit!',
+        title:   '\u26CF You\'re in a Pit!',
         body:    'Pit ' + ((opts && opts.pitNum) || '') + ' is a danger zone. <strong>Score enough in a single turn to escape.</strong>' +
-                 ((opts && opts.needed) ? ' You need <strong>' + opts.needed + ' pts</strong> right now.' : ' Watch the “Need X pts” counter on your tile.'),
+                 ((opts && opts.needed) ? ' You need <strong>' + opts.needed + ' pts</strong> right now.' : ' Watch the "Need X pts" counter on your tile.'),
         side:    'top',
       });
       break;
@@ -125,12 +137,32 @@ function _handleTutorialStep(event, opts) {
     case 'enter-barrel':
       _showStep({
         element: '#lock-human-wrap',
-        title:   '🛢 You\'re on the Barrel!',
-        body:    'So close! <strong>Score exactly enough to hit 1,000 and win.</strong> You have 3 attempts per session — overshoot or bust and you\'re knocked back. Make them count!',
+        title:   '\uD83D\uDEE2 You\'re on the Barrel!',
+        body:    'So close! <strong>Score exactly enough to hit 1,000 and win.</strong> You have 3 attempts per session \u2014 overshoot or bust and you\'re knocked back. Make them count!',
         side:    'top',
       });
       // Barrel step = final teaching moment — mark complete after dismiss
       // tutorialComplete() will be called from the button handler below
+      break;
+
+    // Fix 3: first-bolt teaching moment
+    case 'first-bolt':
+      _showStep({
+        element: '#comms-panel',
+        title:   '\u26A1 Bolts!',
+        body:    'You just got a bolt \u2014 <strong>3 bolts in a row = -100 pts penalty.</strong> Bolts reset when you bank. Don\'t risk it on bolt 2!',
+        side:    'top',
+      });
+      break;
+
+    // Fix 4: overtake teaching moment
+    case 'overtake':
+      _showStep({
+        element: '#comms-panel',
+        title:   '\uD83D\uDDE1 Overtake!',
+        body:    'When a player\'s score drops <strong>below an opponent who is already open,</strong> that opponent loses 50 pts. Cuts both ways \u2014 stay sharp!',
+        side:    'top',
+      });
       break;
   }
 }
@@ -142,7 +174,7 @@ function _showStep({ element, title, body, side, showSkip }) {
   var skipHtml = showSkip
     ? '<button class="dr-btn-skip">Skip tutorial</button>'
     : '';
-  var nextLabel = isBarrelStep ? 'Got it — let\'s win!' : 'Got it';
+  var nextLabel = isBarrelStep ? 'Got it \u2014 let\'s win!' : 'Got it';
 
   _driverInst = driver({
     overlayColor:     'rgba(0,0,0,0.65)',
@@ -184,18 +216,35 @@ function _showStep({ element, title, body, side, showSkip }) {
 // ─── HINT MESSAGES (returning users, lightweight) ──────────────────────────────────────────
 
 var _HINTS = {
-  'first-roll':   { text: '💡 1s = 10 pts, 5s = 5 pts alone. Three of a kind scores big. Bank to save or roll for more.', skin: 'hint' },
-  'first-bank':   { text: '✅ Banked! Points saved and account opened.',                       skin: 'good' },
-  'first-bust':   { text: '💥 Bust — no scoring dice. Turn passes to opponent.',               skin: 'bad'  },
-  'enter-pit':    { text: '⛏ Pit zone — score enough in one turn to escape.',                 skin: 'warn' },
-  'enter-barrel': { text: '🛢 Barrel — 3 attempts to reach exactly 1,000 and win!',          skin: 'warn' },
+  'first-roll':   { text: '\uD83D\uDCA1 1s = 10 pts, 5s = 5 pts alone. Three of a kind scores big. Bank to save or roll for more.', skin: 'hint' },
+  'first-open':   { text: '\uD83D\uDD13 Account open! You scored 50+ pts in one turn.',                skin: 'good' },
+  'first-bank':   { text: '\u2705 Banked! Points saved.',                                              skin: 'good' },
+  'first-bust':   { text: '\uD83D\uDCA5 Bust \u2014 no scoring dice. Turn passes to opponent.',        skin: 'bad'  },
+  'enter-pit':    { text: '\u26CF Pit zone \u2014 score enough in one turn to escape.',                skin: 'warn' },
+  'enter-barrel': { text: '\uD83D\uDEE2 Barrel \u2014 3 attempts to reach exactly 1,000 and win!',    skin: 'warn' },
+  'first-bolt':   { text: '\u26A1 Bolt! 3 in a row = -100 pts penalty. Bolts reset on bank.',         skin: 'warn' },
+  'overtake':     { text: '\uD83D\uDDE1 Overtake \u2014 score drops can cost opponents 50 pts.',       skin: 'warn' },
 };
 
 function _handleHint(event) {
   if (_seenThisSession.has(event)) return;
+  if (_disabledHints.has(event)) return; // Fix 5: permanently dismissed
   _seenThisSession.add(event);
   var hint = _HINTS[event];
-  if (hint && _setMessage) _setMessage(hint.text, hint.skin);
+  if (hint && _setMessage) _setMessage(hint.text, hint.skin, null, event); // pass event key for dismiss button
+}
+
+/**
+ * Permanently suppress a specific hint for this user (Fix 5: disable-from-tip).
+ * Call when user dismisses a hint via the comms panel.
+ */
+export async function dismissHint(event) {
+  if (!_user || !event) return;
+  _disabledHints.add(event);
+  _seenThisSession.add(event);
+  var disabled = Array.from(_disabledHints);
+  if (_user.user_metadata) _user.user_metadata.hints_disabled = disabled;
+  await _writeMeta({ hints_disabled: disabled });
 }
 
 // ─── SKIP ───────────────────────────────────────────────────────────────────────────────────
@@ -204,7 +253,7 @@ function _onSkip() {
   _tutorialMode = false;
   _hintsMode    = true;
   _writeMeta({ tutorial_completed: true });
-  if (_setMessage) _setMessage('Tutorial skipped — hints are still on. Turn them off in Settings ⚙.', 'hint');
+  if (_setMessage) _setMessage('Tutorial skipped \u2014 hints are still on. Turn them off in Settings \u2699.', 'hint');
 }
 
 // ─── COMPLETION ────────────────────────────────────────────────────────────────────────────
@@ -218,7 +267,7 @@ export function tutorialComplete() {
   _tutorialMode = false;
   _hintsMode    = true;
   _writeMeta({ tutorial_completed: true });
-  if (_setMessage) _setMessage('🎓 You know the basics! Hints stay on — turn them off in Settings ⚙ anytime.', 'hint');
+  if (_setMessage) _setMessage('\uD83C\uDF93 You know the basics! Hints stay on \u2014 turn them off in Settings \u2699 anytime.', 'hint');
 }
 
 // ─── SETTINGS API ────────────────────────────────────────────────────────────────────────────
@@ -255,6 +304,7 @@ export function resetForTesting() {
   _setMessage      = null;
   _seenThisSession = new Set();
   _stepsFired      = new Set();
+  _disabledHints   = new Set();
 }
 
 // ─── SUPABASE WRITE ───────────────────────────────────────────────────────────────────────────

@@ -1115,6 +1115,33 @@ body::after {
   transition: color 0.2s ease;
 }
 
+/* Hint dismiss button — only visible when a hint is showing */
+#comms-dismiss {
+  display: none;
+  flex-shrink: 0;
+  background: transparent;
+  border: 1px solid rgba(138,92,26,0.4);
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  color: var(--brass-dim);
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.6;
+  transition: opacity 0.15s, border-color 0.15s, color 0.15s;
+  margin-left: auto;
+}
+#comms-dismiss:hover {
+  opacity: 1;
+  border-color: var(--brass-light);
+  color: var(--brass-light);
+}
+
 /* Skin classes */
 #comms-message.skin-neutral { border-color: transparent; }
 #comms-message.skin-neutral #comms-text { color: var(--cream-dark); }
@@ -1988,17 +2015,17 @@ body::after {
 
   /* Comms panel — tighter on mobile */
   #comms-panel {
-    height: 72px;
+    height: 90px;
   }
   #comms-status {
-    padding: 3px 10px;
+    padding: 5px 12px;
   }
-  .comms-label { font-size: 9px; }
+  .comms-label { font-size: 10px; }
   #comms-turn-num,
-  #comms-whose-turn { font-size: 13px; }
-  #comms-turn-score  { font-size: 14px; }
+  #comms-whose-turn { font-size: 15px; }
+  #comms-turn-score  { font-size: 16px; }
   #comms-message { padding: 0 10px; }
-  #comms-text    { font-size: 15px; }
+  #comms-text    { font-size: 17px; }
   #comms-icon    { font-size: 14px; }
 }
 
