@@ -371,7 +371,8 @@ function checkOvertakeByPenalty(g, penalisedIndex, scoreBefore) {
   for (var oi = 0; oi < g.players.length; oi++) {
     if (oi === penalisedIndex) continue;
     var opp = g.players[oi];
-    if (opp.isOpen && scoreBefore > opp.score && player.score <= opp.score) {
+    // Overtake only fires if: opponent was behind before the drop, AND is now ahead
+    if (opp.isOpen && opp.score > 0 && scoreBefore > opp.score && player.score < opp.score) {
       opp.score = Math.max(0, opp.score - CONFIG.OVERTAKE_PENALTY);
       g.turn.overtake_by_penalty = opp.name;
       g.log.push(opp.name + ' overtook ' + player.name + ' via penalty — ' + opp.name + ' -' + CONFIG.OVERTAKE_PENALTY + ' pts');
