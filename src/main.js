@@ -284,7 +284,12 @@ if (lobbyHintsToggle) lobbyHintsToggle.addEventListener('click', async function(
 
 // Replay tutorial
 if (lobbyReplayBtn) lobbyReplayBtn.addEventListener('click', async function() {
-  await replayTutorial();
+  await replayTutorial(currentUser);
+  // Sync currentUser so initTutorial() sees the updated metadata on next startGame()
+  if (currentUser && currentUser.user_metadata) {
+    currentUser.user_metadata.tutorial_completed = false;
+    currentUser.user_metadata.hints_enabled = true;
+  }
   if (lobbyReplayRow) lobbyReplayRow.style.display = 'none';
 });
 

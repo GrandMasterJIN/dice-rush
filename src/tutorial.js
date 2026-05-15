@@ -288,7 +288,9 @@ export async function setHintsEnabled(enabled) {
   await _writeMeta({ hints_enabled: enabled });
 }
 
-export async function replayTutorial() {
+export async function replayTutorial(user) {
+  // Accept optional user override — needed when called from lobby before initTutorial()
+  if (user) _user = user;
   if (_user) _user.user_metadata = Object.assign({}, _user.user_metadata, { tutorial_completed: false, hints_enabled: true });
   await _writeMeta({ tutorial_completed: false, hints_enabled: true });
   // initTutorial() will re-evaluate on next startGame()
