@@ -26,7 +26,6 @@ import {
   getTutorialCompleted,
   setHintsEnabled,
   replayTutorial,
-  dismissHint,
   resetForTesting,
 } from '../tutorial.js';
 
@@ -364,75 +363,4 @@ describe('T-8: Play Again fix — tutorial mode dedup', () => {
 
 });
 
-// ─── Suite T-9: dismissHint (Fix 5) ────────────────────────────────────────────────────
-
-describe('T-9: dismissHint — permanent suppression', () => {
-
-  it('T-35: dismissed hint does not fire again in same session', async () => {
-    const msgs = [];
-    initTutorial(makeUser(true, true), (t) => msgs.push(t));
-    tutorialHook('first-bust');
-    expect(msgs.length).toBe(1);
-
-    // Dismiss the hint — but first-bust already fired and is in _seenThisSession
-    // Reset session state to test dismissHint in isolation
-    resetForTesting();
-    initTutorial(makeUser(true, true), (t) => msgs.push(t));
-    await dismissHint('first-bust');
-    tutorialHook('first-bust'); // blocked by _disabledHints
-    expect(msgs.length).toBe(1); // no new message
-  });
-
-  it('T-36: dismissHint blocks hint on next game re-init', async () => {
-    const msgs = [];
-    const user = makeUser(true, true);
-    initTutorial(user, (t) => msgs.push(t));
-    await dismissHint('enter-barrel');
-
-    // New game
-    initTutorial(user, (t) => msgs.push(t));
-    tutorialHook('enter-barrel'); // blocked by _disabledHints (loaded from user.user_metadata)
-    expect(msgs.length).toBe(0);
-  });
-
-  it('T-37: dismissHint writes hints_disabled to user metadata', async () => {
-    const user = makeUser(true, true);
-    initTutorial(user, vi.fn());
-    await dismissHint('first-roll');
-    expect(user.user_metadata.hints_disabled).toContain('first-roll');
-  });
-
-  it('T-38: dismissHint accumulates multiple dismissed hints', async () => {
-    const user = makeUser(true, true);
-    initTutorial(user, vi.fn());
-    await dismissHint('first-roll');
-    await dismissHint('first-bust');
-    expect(user.user_metadata.hints_disabled).toContain('first-roll');
-    expect(user.user_metadata.hints_disabled).toContain('first-bust');
-  });
-
-  it('T-39: hints_disabled loaded from user_metadata on initTutorial', () => {
-    const msgs = [];
-    const user = {
-      id: 'u1',
-      user_metadata: {
-        tutorial_completed: true,
-        hints_enabled: true,
-        hints_disabled: ['first-bust', 'enter-barrel'],
-      },
-    };
-    initTutorial(user, (t) => msgs.push(t));
-    tutorialHook('first-bust');    // in hints_disabled — should be blocked
-    tutorialHook('enter-barrel'); // in hints_disabled — should be blocked
-    tutorialHook('first-roll');   // not disabled — should fire
-    expect(msgs.length).toBe(1);
-    expect(msgs[0]).toMatch(/1s.*10|10.*1s/i);
-  });
-
-  it('T-40: dismissHint is no-op for null user', async () => {
-    initTutorial(null, vi.fn());
-    await expect(dismissHint('first-bust')).resolves.toBeUndefined();
-  });
-
-});
 

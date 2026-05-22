@@ -228,23 +228,10 @@ var _HINTS = {
 
 function _handleHint(event) {
   if (_seenThisSession.has(event)) return;
-  if (_disabledHints.has(event)) return; // Fix 5: permanently dismissed
+  if (_disabledHints.has(event)) return;
   _seenThisSession.add(event);
   var hint = _HINTS[event];
-  if (hint && _setMessage) _setMessage(hint.text, hint.skin, null, event); // pass event key for dismiss button
-}
-
-/**
- * Permanently suppress a specific hint for this user (Fix 5: disable-from-tip).
- * Call when user dismisses a hint via the comms panel.
- */
-export async function dismissHint(event) {
-  if (!_user || !event) return;
-  _disabledHints.add(event);
-  _seenThisSession.add(event);
-  var disabled = Array.from(_disabledHints);
-  if (_user.user_metadata) _user.user_metadata.hints_disabled = disabled;
-  await _writeMeta({ hints_disabled: disabled });
+  if (hint && _setMessage) _setMessage(hint.text, hint.skin);
 }
 
 // ─── SKIP ───────────────────────────────────────────────────────────────────────────────────

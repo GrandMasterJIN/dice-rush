@@ -7,7 +7,7 @@ import { logSessionStart, logTurnStart, logRoll, logTurnEnd, logEvent, logSessio
 import { getSession, saveScore } from './auth.js';
 import { supabase } from './supabase.js';
 import { initAuthModal, showAuthModal, updateAuthUI } from './authModal.js';
-import { initTutorial, tutorialHook, tutorialComplete, getHintsEnabled, getTutorialCompleted, setHintsEnabled, replayTutorial, dismissHint } from './tutorial.js';
+import { initTutorial, tutorialHook, tutorialComplete, getHintsEnabled, getTutorialCompleted, setHintsEnabled, replayTutorial } from './tutorial.js';
 
 // Turn counter — incremented on every turn start
 var turnCounter = 0;
@@ -59,20 +59,6 @@ var commsTurnScore = document.getElementById('comms-turn-score');
 var commsMessage   = document.getElementById('comms-message');
 var commsIcon      = document.getElementById('comms-icon');
 var commsText      = document.getElementById('comms-text');
-var commsDismiss   = document.getElementById('comms-dismiss');
-var _currentHintEvent = null; // tracks which hint event is showing, for dismiss
-if (commsDismiss) {
-  commsDismiss.style.display = 'none'; // hidden by default
-  commsDismiss.addEventListener('click', function() {
-    if (_currentHintEvent) {
-      dismissHint(_currentHintEvent);
-      _currentHintEvent = null;
-      commsDismiss.style.display = 'none';
-      setMessage('Hint dismissed — won\'t show again.', 'hint');
-      setTimeout(function() { setMessage('', 'neutral'); }, 1800);
-    }
-  });
-}
 // Toast elements (winner ceremony only)
 var toastEl       = document.getElementById('event-toast');
 var toastIconEl   = document.getElementById('toast-icon');
@@ -1256,11 +1242,8 @@ function disableActions() {
   btnBank.disabled = true;
   document.getElementById('action-buttons').classList.remove('bank-available');
 }
-function setMessage(text, skin, icon, hintEvent) {
+function setMessage(text, skin, icon) {
   // skin: 'neutral'|'hint'|'good'|'warn'|'bad'|'bot'|'big'
-  // hintEvent: optional — the tutorial event key this message came from (for dismiss)
-  _currentHintEvent = hintEvent || null;
-  if (commsDismiss) commsDismiss.style.display = hintEvent ? '' : 'none';
   if (commsMessage) {
     // Strip legacy compound classes like 'bad big', 'good big', 'warn big'
     var baseSkin = (skin || 'neutral').split(' ')[0];
