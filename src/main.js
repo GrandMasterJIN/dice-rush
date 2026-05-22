@@ -241,7 +241,16 @@ document.querySelectorAll('.diff-btn').forEach(function(btn) {
 
 // ─── LOBBY ──────────────────────────────────────────────────────────────────────────────
 
-function showLobby() {
+async function showLobby() {
+  // Re-fetch user to get latest metadata (e.g. tutorial_completed updated mid-session)
+  try {
+    var { data } = await supabase.auth.getUser();
+    if (data && data.user) {
+      currentUser = data.user;
+      updateAuthUI(currentUser);
+    }
+  } catch(e) { console.warn('showLobby getUser failed:', e); }
+
   // Hide auth panels, show lobby panel
   var authPanels = document.querySelectorAll('.entry-auth-panel, .entry-auth-tabs');
   authPanels.forEach(function(el) { el.style.display = 'none'; });
