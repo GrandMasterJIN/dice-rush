@@ -12,7 +12,7 @@
 import RAPIER from '@dimforge/rapier3d-compat';
 
 export async function initDice3D(canvasId) {
-  await RAPIER.init();
+  await RAPIER.init({});
 
   const THREE = window.THREE;
   const canvas = document.getElementById(canvasId);
