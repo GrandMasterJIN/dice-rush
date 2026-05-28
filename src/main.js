@@ -363,7 +363,8 @@ btnRoll.addEventListener('click', function() {
   if (!game || game.currentPlayerIndex !== 0) return;
   disableActions();
   if (dice3D) dice3D.setWaiting(false);
-  playRollStart();
+  // Small delay so rattle sound aligns with dice launch impulse
+  setTimeout(playRollStart, 80);
   animateDice(function(physicsValues) {
     var lockedBefore = game.turn.lockedIndices.slice();
     game = processRoll(game, physicsValues);
@@ -379,7 +380,7 @@ btnRoll.addEventListener('click', function() {
       phase === 'bust' ? 'bust' : game.turn.hotDice ? 'hot' : phase === 'dumptruck' ? 'dumptruck' : 'scored');
 
     handleRollResult();
-    playDiceLand(5);
+    playDiceLand(game.turn.lockedIndices ? 5 - game.turn.lockedIndices.length : 5);
   });
 });
 
@@ -650,7 +651,7 @@ btnBank.addEventListener('click', function() {
   var wasOpen    = game.players[0] ? game.players[0].isOpen : false;
   var bankedPts  = game.turn.turnScore;
   game = bankTurn(game);
-  playBank();
+  setTimeout(playBank, 120);
   logTurnEnd('banked', bankedPts, currentScores());
   tutorialHook('first-bank');
   // Fix 2: fire first-open only when the opening bank just happened
