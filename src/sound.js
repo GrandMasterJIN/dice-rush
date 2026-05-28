@@ -1,8 +1,9 @@
 // sound.js — Dice Rush procedural sound effects via Web Audio API
+// Casino aesthetic: warm, soft, felt-appropriate. Nothing harsh or alarming.
 // All sounds generated programmatically — no audio files required.
 // Mute state persisted in localStorage under 'diceRush_muted'.
 
-var _ctx  = null;  // AudioContext — created on first user gesture
+var _ctx   = null;
 var _muted = localStorage.getItem('diceRush_muted') === '1';
 
 function ctx() {
@@ -12,313 +13,207 @@ function ctx() {
 }
 
 // ─── MUTE TOGGLE ─────────────────────────────────────────────────────────────
-export function isMuted() { return _muted; }
-
-export function setMuted(val) {
-  _muted = !!val;
-  localStorage.setItem('diceRush_muted', _muted ? '1' : '0');
-}
-
-export function toggleMute() {
-  setMuted(!_muted);
-  return _muted;
-}
+export function isMuted()     { return _muted; }
+export function setMuted(val) { _muted = !!val; localStorage.setItem('diceRush_muted', _muted ? '1' : '0'); }
+export function toggleMute()  { setMuted(!_muted); return _muted; }
 
 // ─── LOW-LEVEL HELPERS ────────────────────────────────────────────────────────
-function gain(c, vol) {
-  var g = c.createGain();
-  g.gain.value = vol;
-  g.connect(c.destination);
-  return g;
-}
 
-function osc(c, type, freq, startT, endT, g) {
+// Sine oscillator with smooth attack/decay — warm, no clicks
+function sineNote(c, freq, startT, attackS, decayS, vol) {
+  var g = c.createGain();
+  g.gain.setValueAtTime(0, startT);
+  g.gain.linearRampToValueAtTime(vol, startT + attackS);
+  g.gain.exponentialRampToValueAtTime(0.0001, startT + attackS + decayS);
+  g.connect(c.destination);
   var o = c.createOscillator();
-  o.type = type;
+  o.type = 'sine';
   o.frequency.value = freq;
   o.connect(g);
   o.start(startT);
-  o.stop(endT);
+  o.stop(startT + attackS + decayS + 0.05);
 }
 
-function noise(c, durationS, gNode) {
-  // White noise via script processor polyfill using buffer source
+// Soft filtered noise burst — wooden/felt texture
+function feltThud(c, startT, freq, vol, durationS) {
   var bufSize = Math.ceil(c.sampleRate * durationS);
   var buf = c.createBuffer(1, bufSize, c.sampleRate);
   var data = buf.getChannelData(0);
   for (var i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
-  var src = c.createBufferSource();
-  src.buffer = buf;
-  src.connect(gNode);
-  src.start();
-  return src;
-}
-
-function envelope(gainNode, c, attackT, decayT, vol) {
-  var t = c.currentTime;
-  gainNode.gain.cancelScheduledValues(t);
-  gainNode.gain.setValueAtTime(0, t);
-  gainNode.gain.linearRampToValueAtTime(vol, t + attackT);
-  gainNode.gain.exponentialRampToValueAtTime(0.001, t + attackT + decayT);
-}
-
-// ─── SOUND DEFINITIONS ────────────────────────────────────────────────────────
-
-// Single die land — short dry clatter thud
-function playDieLand(delay) {
-  if (_muted) return;
-  var c = ctx();
-  var t = c.currentTime + (delay || 0);
-
-  // Low thud — filtered noise burst
-  var g1 = c.createGain();
-  g1.gain.setValueAtTime(0, t);
-  g1.gain.linearRampToValueAtTime(0.5, t + 0.005);
-  g1.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
 
   var filter = c.createBiquadFilter();
   filter.type = 'bandpass';
-  filter.frequency.value = 160 + Math.random() * 80;
-  filter.Q.value = 1.2;
+  filter.frequency.value = freq;
+  filter.Q.value = 2.5;
 
-  var bufSize = Math.ceil(c.sampleRate * 0.1);
-  var buf = c.createBuffer(1, bufSize, c.sampleRate);
-  var data = buf.getChannelData(0);
-  for (var i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
+  var g = c.createGain();
+  g.gain.setValueAtTime(0, startT);
+  g.gain.linearRampToValueAtTime(vol, startT + 0.004);
+  g.gain.exponentialRampToValueAtTime(0.0001, startT + durationS);
+
   var src = c.createBufferSource();
   src.buffer = buf;
   src.connect(filter);
-  filter.connect(g1);
-  g1.connect(c.destination);
-  src.start(t);
-
-  // High click layer
-  var g2 = c.createGain();
-  g2.gain.setValueAtTime(0, t);
-  g2.gain.linearRampToValueAtTime(0.25, t + 0.002);
-  g2.gain.exponentialRampToValueAtTime(0.001, t + 0.03);
-  g2.connect(c.destination);
-  osc(c, 'square', 800 + Math.random() * 400, t, t + 0.03, g2);
+  filter.connect(g);
+  g.connect(c.destination);
+  src.start(startT);
 }
 
-// Bank — chip stack click (satisfying multi-click)
-export function playBank() {
-  if (_muted) return;
-  var c = ctx();
-  var clicks = 4;
-  for (var i = 0; i < clicks; i++) {
-    (function(idx) {
-      var t = c.currentTime + idx * 0.045;
-      var g = c.createGain();
-      g.gain.setValueAtTime(0.35 - idx * 0.05, t);
-      g.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
-      g.connect(c.destination);
-      osc(c, 'square', 1200 - idx * 60, t, t + 0.04, g);
-    })(i);
-  }
+// Warm triangle note — rounded, soft
+function triNote(c, freq, startT, attackS, decayS, vol) {
+  var g = c.createGain();
+  g.gain.setValueAtTime(0, startT);
+  g.gain.linearRampToValueAtTime(vol, startT + attackS);
+  g.gain.exponentialRampToValueAtTime(0.0001, startT + attackS + decayS);
+  g.connect(c.destination);
+  var o = c.createOscillator();
+  o.type = 'triangle';
+  o.frequency.value = freq;
+  o.connect(g);
+  o.start(startT);
+  o.stop(startT + attackS + decayS + 0.05);
 }
 
-// Dice roll launch — light rattling
+// ─── SOUNDS ───────────────────────────────────────────────────────────────────
+
+// Dice roll start — soft wooden rattle (quick felt thuds)
 export function playRollStart() {
   if (_muted) return;
   var c = ctx();
-  var count = 8;
+  var count = 6;
   for (var i = 0; i < count; i++) {
-    (function(idx) {
-      var delay = idx * 0.025 + Math.random() * 0.015;
-      playDieLand(delay * 0.4);
-    })(i);
+    var t = c.currentTime + i * 0.03 + Math.random() * 0.02;
+    feltThud(c, t, 180 + Math.random() * 60, 0.18, 0.06);
   }
 }
 
-// Dice land — 5 staggered thuds
+// Dice land — gentle felt thuds, staggered per die
 export function playDiceLand(count) {
   if (_muted) return;
+  var c = ctx();
   var n = count || 5;
   for (var i = 0; i < n; i++) {
-    playDieLand(i * 0.06 + Math.random() * 0.04);
+    var t = c.currentTime + i * 0.055 + Math.random() * 0.025;
+    feltThud(c, t, 160 + Math.random() * 80, 0.22, 0.09);
   }
 }
 
-// Bolt warning (bolt 1 or 2) — short sharp buzz
-export function playBolt() {
+// Bank — warm coin/chip clink: two soft sine tones
+export function playBank() {
   if (_muted) return;
   var c = ctx();
   var t = c.currentTime;
-  var g = c.createGain();
-  g.gain.setValueAtTime(0.3, t);
-  g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
-  g.connect(c.destination);
-  osc(c, 'sawtooth', 180, t, t + 0.18, g);
-  // Second buzz pulse
-  var t2 = t + 0.22;
-  var g2 = c.createGain();
-  g2.gain.setValueAtTime(0.2, t2);
-  g2.gain.exponentialRampToValueAtTime(0.001, t2 + 0.12);
-  g2.connect(c.destination);
-  osc(c, 'sawtooth', 160, t2, t2 + 0.12, g2);
+  sineNote(c, 880,  t,        0.005, 0.28, 0.18);
+  sineNote(c, 1100, t + 0.07, 0.005, 0.22, 0.18);
+  sineNote(c, 660,  t + 0.03, 0.005, 0.20, 0.15);
 }
 
-// Bolt penalty — alarm buzzer (harsh)
-export function playBoltPenalty() {
-  if (_muted) return;
-  var c = ctx();
-  var t = c.currentTime;
-  var pulses = 3;
-  for (var i = 0; i < pulses; i++) {
-    (function(idx) {
-      var pt = t + idx * 0.18;
-      var g = c.createGain();
-      g.gain.setValueAtTime(0.4, pt);
-      g.gain.exponentialRampToValueAtTime(0.001, pt + 0.14);
-      g.connect(c.destination);
-      osc(c, 'sawtooth', 220, pt, pt + 0.14, g);
-    })(i);
-  }
-}
-
-// Hot dice — bright shimmer
-export function playHotDice() {
-  if (_muted) return;
-  var c = ctx();
-  var t = c.currentTime;
-  var notes = [880, 1100, 1320, 1760];
-  notes.forEach(function(freq, i) {
-    var nt = t + i * 0.07;
-    var g = c.createGain();
-    g.gain.setValueAtTime(0.15, nt);
-    g.gain.exponentialRampToValueAtTime(0.001, nt + 0.25);
-    g.connect(c.destination);
-    osc(c, 'sine', freq, nt, nt + 0.25, g);
-  });
-}
-
-// Win — short fanfare
-export function playWin() {
-  if (_muted) return;
-  var c = ctx();
-  var t = c.currentTime;
-  var notes = [
-    { f: 523, d: 0.12 },   // C5
-    { f: 659, d: 0.12 },   // E5
-    { f: 784, d: 0.12 },   // G5
-    { f: 1047, d: 0.35 },  // C6
-  ];
-  var offset = 0;
-  notes.forEach(function(n) {
-    var nt = t + offset;
-    var g = c.createGain();
-    g.gain.setValueAtTime(0.25, nt);
-    g.gain.exponentialRampToValueAtTime(0.001, nt + n.d + 0.1);
-    g.connect(c.destination);
-    osc(c, 'triangle', n.f, nt, nt + n.d + 0.1, g);
-    offset += n.d;
-  });
-  // Harmony layer
-  offset = 0;
-  [659, 784, 988, 1319].forEach(function(freq, i) {
-    var nt = t + i * notes[i].d;
-    var g = c.createGain();
-    g.gain.setValueAtTime(0.1, nt);
-    g.gain.exponentialRampToValueAtTime(0.001, nt + notes[i].d + 0.1);
-    g.connect(c.destination);
-    osc(c, 'sine', freq, nt, nt + notes[i].d + 0.1, g);
-  });
-}
-
-// Loss — deflated wah-wah
-export function playLoss() {
-  if (_muted) return;
-  var c = ctx();
-  var t = c.currentTime;
-  var notes = [392, 349, 311, 261]; // G4 F4 Eb4 C4
-  var offset = 0;
-  notes.forEach(function(freq, i) {
-    var nt = t + offset;
-    var g = c.createGain();
-    g.gain.setValueAtTime(0.2, nt);
-    g.gain.exponentialRampToValueAtTime(0.001, nt + 0.22);
-    g.connect(c.destination);
-    osc(c, 'sawtooth', freq, nt, nt + 0.22, g);
-    offset += 0.16;
-  });
-}
-
-// Dump truck — comic low horn
-export function playDumpTruck() {
-  if (_muted) return;
-  var c = ctx();
-  var t = c.currentTime;
-  // Low honk 1
-  var g1 = c.createGain();
-  g1.gain.setValueAtTime(0, t);
-  g1.gain.linearRampToValueAtTime(0.45, t + 0.04);
-  g1.gain.setValueAtTime(0.45, t + 0.22);
-  g1.gain.exponentialRampToValueAtTime(0.001, t + 0.38);
-  g1.connect(c.destination);
-  osc(c, 'sawtooth', 98, t, t + 0.38, g1);
-  // Low honk 2 (higher pitch, 0.4s later)
-  var t2 = t + 0.45;
-  var g2 = c.createGain();
-  g2.gain.setValueAtTime(0, t2);
-  g2.gain.linearRampToValueAtTime(0.35, t2 + 0.04);
-  g2.gain.setValueAtTime(0.35, t2 + 0.28);
-  g2.gain.exponentialRampToValueAtTime(0.001, t2 + 0.48);
-  g2.connect(c.destination);
-  osc(c, 'sawtooth', 73, t2, t2 + 0.48, g2);
-}
-
-// Bust — dull thud
+// Bust — soft dull thud, low and rounded
 export function playBust() {
   if (_muted) return;
   var c = ctx();
   var t = c.currentTime;
-  var g = c.createGain();
-  g.gain.setValueAtTime(0.35, t);
-  g.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
-  var filter = c.createBiquadFilter();
-  filter.type = 'lowpass';
-  filter.frequency.value = 200;
-  filter.connect(g);
-  g.connect(c.destination);
-  var bufSize = Math.ceil(c.sampleRate * 0.25);
-  var buf = c.createBuffer(1, bufSize, c.sampleRate);
-  var data = buf.getChannelData(0);
-  for (var i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
-  var src = c.createBufferSource();
-  src.buffer = buf;
-  src.connect(filter);
-  src.start(t);
+  feltThud(c, t, 120, 0.28, 0.18);
+  feltThud(c, t + 0.04, 100, 0.15, 0.14);
 }
 
-// Straight / big combo — ascending arpeggio
+// Bolt warning (1st or 2nd bolt) — quiet low chime, gentle caution
+export function playBolt() {
+  if (_muted) return;
+  var c = ctx();
+  var t = c.currentTime;
+  sineNote(c, 330, t,        0.01, 0.35, 0.12);
+  sineNote(c, 277, t + 0.18, 0.01, 0.28, 0.10);
+}
+
+// Bolt penalty (3rd bolt) — two soft low tones, mild disappointment
+export function playBoltPenalty() {
+  if (_muted) return;
+  var c = ctx();
+  var t = c.currentTime;
+  sineNote(c, 294, t,        0.01, 0.30, 0.14);
+  sineNote(c, 247, t + 0.22, 0.01, 0.30, 0.14);
+  sineNote(c, 220, t + 0.44, 0.01, 0.35, 0.16);
+}
+
+// Hot dice — warm ascending shimmer
+export function playHotDice() {
+  if (_muted) return;
+  var c = ctx();
+  var t = c.currentTime;
+  var notes = [440, 550, 660, 770, 880];
+  notes.forEach(function(freq, i) {
+    sineNote(c, freq, t + i * 0.065, 0.01, 0.25, 0.14);
+  });
+}
+
+// Straight — gentle rising arpeggio (warm triangle tones)
 export function playStraight() {
   if (_muted) return;
   var c = ctx();
   var t = c.currentTime;
-  [440, 550, 660, 880, 1100].forEach(function(freq, i) {
-    var nt = t + i * 0.055;
-    var g = c.createGain();
-    g.gain.setValueAtTime(0.18, nt);
-    g.gain.exponentialRampToValueAtTime(0.001, nt + 0.18);
-    g.connect(c.destination);
-    osc(c, 'triangle', freq, nt, nt + 0.18, g);
+  var notes = [392, 494, 587, 698, 784]; // G4 B4 D5 F5 G5
+  notes.forEach(function(freq, i) {
+    triNote(c, freq, t + i * 0.07, 0.008, 0.28, 0.15);
   });
 }
 
-// Overtake — dramatic low-mid hit
+// Overtake — soft mid-tone double pulse, neutral
 export function playOvertake() {
   if (_muted) return;
   var c = ctx();
   var t = c.currentTime;
+  sineNote(c, 370, t,        0.01, 0.22, 0.13);
+  sineNote(c, 370, t + 0.28, 0.01, 0.22, 0.11);
+}
+
+// Dump truck — low comedic "wump", warm and soft
+export function playDumpTruck() {
+  if (_muted) return;
+  var c = ctx();
+  var t = c.currentTime;
+  // Deep low wump
+  feltThud(c, t,        80,  0.30, 0.28);
+  feltThud(c, t + 0.08, 65,  0.22, 0.22);
+  // Soft descending sine — comedic fall
   var g = c.createGain();
-  g.gain.setValueAtTime(0.3, t);
-  g.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(0.12, t + 0.05);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.55);
   g.connect(c.destination);
-  osc(c, 'sawtooth', 120, t, t + 0.35, g);
-  var g2 = c.createGain();
-  g2.gain.setValueAtTime(0.15, t + 0.05);
-  g2.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
-  g2.connect(c.destination);
-  osc(c, 'sine', 240, t + 0.05, t + 0.3, g2);
+  var o = c.createOscillator();
+  o.type = 'sine';
+  o.frequency.setValueAtTime(200, t);
+  o.frequency.exponentialRampToValueAtTime(60, t + 0.55);
+  o.connect(g);
+  o.start(t);
+  o.stop(t + 0.6);
+}
+
+// Win — warm gentle fanfare (triangle chord + rising arpeggio)
+export function playWin() {
+  if (_muted) return;
+  var c = ctx();
+  var t = c.currentTime;
+  // Rising arpeggio
+  var melody = [523, 659, 784, 1047]; // C5 E5 G5 C6
+  melody.forEach(function(freq, i) {
+    triNote(c, freq, t + i * 0.11, 0.01, 0.45, 0.18);
+  });
+  // Soft harmony underneath
+  var harmony = [330, 392, 494, 659];
+  harmony.forEach(function(freq, i) {
+    sineNote(c, freq, t + i * 0.11, 0.01, 0.40, 0.08);
+  });
+}
+
+// Loss — soft descending notes, sad but gentle
+export function playLoss() {
+  if (_muted) return;
+  var c = ctx();
+  var t = c.currentTime;
+  var notes = [392, 349, 330, 294]; // G4 F4 E4 D4
+  notes.forEach(function(freq, i) {
+    triNote(c, freq, t + i * 0.14, 0.01, 0.35, 0.13);
+  });
 }
