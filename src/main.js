@@ -8,7 +8,7 @@ import { getSession, saveScore } from './auth.js';
 import { supabase } from './supabase.js';
 import { initAuthModal, showAuthModal, updateAuthUI } from './authModal.js';
 import { initTutorial, tutorialHook, tutorialComplete, getHintsEnabled, getTutorialCompleted, setHintsEnabled, replayTutorial } from './tutorial.js';
-import { playBank, playRollStart, playDiceLand, playBolt, playBoltPenalty, playHotDice, playWin, playLoss, playDumpTruck, playBust, playStraight, playOvertake, isMuted, toggleMute } from './sound.js';
+import { playBank, playDiceLand, playBolt, playBoltPenalty, playHotDice, playWin, playLoss, playDumpTruck, playBust, playStraight, playOvertake, isMuted, toggleMute } from './sound.js';
 
 // Turn counter — incremented on every turn start
 var turnCounter = 0;
@@ -363,8 +363,6 @@ btnRoll.addEventListener('click', function() {
   if (!game || game.currentPlayerIndex !== 0) return;
   disableActions();
   if (dice3D) dice3D.setWaiting(false);
-  // Small delay so rattle sound aligns with dice launch impulse
-  setTimeout(playRollStart, 80);
   animateDice(function(physicsValues) {
     var lockedBefore = game.turn.lockedIndices.slice();
     game = processRoll(game, physicsValues);

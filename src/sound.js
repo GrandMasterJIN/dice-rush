@@ -76,17 +76,6 @@ function triNote(c, freq, startT, attackS, decayS, vol) {
 
 // ─── SOUNDS ───────────────────────────────────────────────────────────────────
 
-// Dice roll start — soft wooden rattle (quick felt thuds)
-export function playRollStart() {
-  if (_muted) return;
-  var c = ctx();
-  var count = 6;
-  for (var i = 0; i < count; i++) {
-    var t = c.currentTime + i * 0.03 + Math.random() * 0.02;
-    feltThud(c, t, 180 + Math.random() * 60, 0.18, 0.06);
-  }
-}
-
 // Dice land — gentle felt thuds, staggered per die
 export function playDiceLand(count) {
   if (_muted) return;
