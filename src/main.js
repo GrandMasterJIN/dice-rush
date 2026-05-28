@@ -8,7 +8,6 @@ import { getSession, saveScore } from './auth.js';
 import { supabase } from './supabase.js';
 import { initAuthModal, showAuthModal, updateAuthUI } from './authModal.js';
 import { initTutorial, tutorialHook, tutorialComplete, getHintsEnabled, getTutorialCompleted, setHintsEnabled, replayTutorial } from './tutorial.js';
-import { playBank, playDiceLand, playBolt, playBoltPenalty, playHotDice, playWin, playLoss, playDumpTruck, playBust, playStraight, playOvertake, isMuted, toggleMute } from './sound.js';
 
 // Turn counter — incremented on every turn start
 var turnCounter = 0;
@@ -378,7 +377,6 @@ btnRoll.addEventListener('click', function() {
       phase === 'bust' ? 'bust' : game.turn.hotDice ? 'hot' : phase === 'dumptruck' ? 'dumptruck' : 'scored');
 
     handleRollResult();
-    playDiceLand(game.turn.lockedIndices ? 5 - game.turn.lockedIndices.length : 5);
   });
 });
 
@@ -520,18 +518,15 @@ function handleRollResult() {
     var penalty = (bolts === 0);
     var hadLocked = (game.turn.lockedIndices && game.turn.lockedIndices.length > 0);
     if (hadLocked) {
-      playBust();
       setMessage('No score on remaining dice — turn ends.', 'warn');
       logEvent('BUST_LOCKED', playerName + ' busted with locked dice — no bolt');
     } else if (penalty) {
-      playBoltPenalty();
       flashBoltPenalty(scaleBoltsH, CONFIG.BOLT_PENALTY_PTS);
       var overtakeMsg = game.turn.overtake_by_penalty
         ? ' Bot overtook you — Bot loses 50 pts.' : '';
       setMessage('⚡ Bolt penalty: -100 pts.' + overtakeMsg, 'bad');
       logEvent('BOLT_PENALTY', playerName + ' -' + CONFIG.BOLT_PENALTY_PTS + ' pts' + (game.turn.overtake_by_penalty ? ' | Bot overtook via penalty -50 pts' : ''));
     } else {
-      playBolt();
       setMessage('⚡ Bolt ' + bolts + '/3 — turn ends.', 'warn');
       logEvent('BOLT', playerName + ' bolt ' + bolts + '/3');
       tutorialHook('first-bolt'); // Fix 3: bolt teaching moment
@@ -554,7 +549,6 @@ function handleRollResult() {
   if (phase === 'dumptruck') {
     resetFillInstant(fillHuman);
     renderDice(false); renderScales();
-    playDumpTruck();
     logEvent('DUMP_TRUCK', playerName + ' hit 555 — reset to 0');
     logTurnEnd('dumptruck', null, currentScores());
     showDumpTruck(playerName);
@@ -579,11 +573,9 @@ function handleRollResult() {
       ? rollResult.combinations.map(function(c){ return c.label; }).join(' + ')
       : '';
     if (comboName === 'Small Straight') {
-      playStraight();
       setMessage('🎲 Small Straight — 125 pts!', 'good');
       logEvent('SMALL_STRAIGHT', playerName + ' rolled a Small Straight +125');
     } else if (comboName === 'Large Straight') {
-      playStraight();
       setMessage('🎲 Large Straight — 250 pts!', 'good');
       logEvent('LARGE_STRAIGHT', playerName + ' rolled a Large Straight +250');
     } else {
@@ -600,13 +592,10 @@ function handleRollResult() {
       ? hotResult.combinations.map(function(c){ return c.label; }).join(' + ')
       : '';
     if (hotCombo === 'Small Straight') {
-      playStraight();
       setMessage('🎲 Small Straight + Hot Dice!', 'good');
     } else if (hotCombo === 'Large Straight') {
-      playStraight();
       setMessage('🎲 Large Straight + Hot Dice!', 'good');
     } else {
-      playHotDice();
       setMessage('🔥 Hot Dice — roll all 5!', 'good');
     }
   }
@@ -649,7 +638,6 @@ btnBank.addEventListener('click', function() {
   var wasOpen    = game.players[0] ? game.players[0].isOpen : false;
   var bankedPts  = game.turn.turnScore;
   game = bankTurn(game);
-  setTimeout(playBank, 120);
   logTurnEnd('banked', bankedPts, currentScores());
   tutorialHook('first-bank');
   // Fix 2: fire first-open only when the opening bank just happened
@@ -696,12 +684,10 @@ function handleBankResult() {
   var lastLog = game.log[game.log.length - 2] || '';
   var prevLog = game.log[game.log.length - 3] || '';
   if (lastLog.indexOf(playerName + ' overtook') !== -1 || prevLog.indexOf(playerName + ' overtook') !== -1) {
-    playOvertake();
     setMessage('🗡 You overtook Bot — Bot loses 50 pts.', 'good');
     logEvent('OVERTAKE', playerName + ' overtook Bot — Bot -50 pts');
     tutorialHook('overtake'); // Fix 4: overtake teaching moment
   } else if (lastLog.indexOf('Bot overtook') !== -1 || prevLog.indexOf('Bot overtook') !== -1) {
-    playOvertake();
     setMessage('🗡 Bot overtook you — -50 pts.', 'bad');
     logEvent('OVERTAKE', 'Bot overtook ' + playerName + ' — ' + playerName + ' -50 pts');
     tutorialHook('overtake'); // Fix 4: overtake teaching moment
@@ -1334,8 +1320,7 @@ function showDumpTruck(whoName) {
 function showGameOver(humanWon) {
   logSessionEnd(humanWon ? playerName : 'Bot', currentScores());
   disableActions();
-  tutorialComplete();
-  if (humanWon) playWin(); else playLoss(); // no-op if already completed or not in tutorial mode
+  tutorialComplete(); // no-op if already completed or not in tutorial mode
 
   // ── Step 1: scale blink on the winner's column ──
   var winnerCol = document.getElementById(humanWon ? 'scale-human-col' : 'scale-bot-col');
@@ -1540,16 +1525,6 @@ document.addEventListener('touchstart', function(e) {
   if (tooltipDismissTimer) clearTimeout(tooltipDismissTimer);
   tooltipDismissTimer = setTimeout(hideTooltip, 2000);
 }, { passive: true });
-
-// ─── MUTE BUTTON ────────────────────────────────────────────────────────────
-var btnMute = document.getElementById('btn-mute');
-if (btnMute) {
-  btnMute.textContent = isMuted() ? '🔇' : '🔊';
-  btnMute.addEventListener('click', function() {
-    var muted = toggleMute();
-    btnMute.textContent = muted ? '🔇' : '🔊';
-  });
-}
 
 // ─── LOG EXPORT BUTTON ────────────────────────────────────────────────────────
 (function() {
