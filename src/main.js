@@ -2,6 +2,7 @@
 import { createGame, processRoll, bankTurn, endTurnOnly, CONFIG } from './logic/gameState.js';
 import { scoreDice } from './logic/scoring.js';
 import { botDecision } from './logic/bot.js';
+import { getBotCharacter, getBotLine } from './logic/botCharacter.js';
 import { initDice3D } from './dice3d.js';
 import { logSessionStart, logTurnStart, logRoll, logTurnEnd, logEvent, logSessionEnd, exportLog } from './sessionLogger.js';
 import { getSession, saveScore } from './auth.js';
@@ -33,6 +34,7 @@ var dice3D = null;
 var game       = null;
 var playerName = 'You';
 var difficulty = 'easy';
+var botCharacter = getBotCharacter('easy'); // set fresh on each startGame()
 
 // ─── ELEMENT REFS ─────────────────────────────────────────────────────────────
 var screenName  = document.getElementById('screen-name');
@@ -120,6 +122,11 @@ var lobbyReplayBtn   = document.getElementById('lobby-replay-btn');
 var lobbyPlayBtn     = document.getElementById('lobby-play-btn');
 var lobbyLogoutBtn   = document.getElementById('lobby-logout-btn');
 var lobbyDiffBtns    = document.querySelectorAll('#lobby-panel .diff-btn');
+// Exit game mid-session
+var btnExitGame          = document.getElementById('btn-exit-game');
+var exitConfirmOverlay   = document.getElementById('exit-confirm-overlay');
+var exitConfirmYes       = document.getElementById('exit-confirm-yes');
+var exitConfirmNo        = document.getElementById('exit-confirm-no');
 var tooltipEl      = document.getElementById('tooltip');
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
@@ -255,6 +262,15 @@ async function showLobby() {
   var tutDone = currentUser ? (currentUser.user_metadata?.tutorial_completed ?? false) : false;
   if (lobbyReplayRow) lobbyReplayRow.style.display = tutDone ? 'flex' : 'none';
 
+  // Restore last selected difficulty (default 'easy')
+  var savedDiff = currentUser ? (currentUser.user_metadata?.difficulty || 'easy') : 'easy';
+  // Clamp to valid values in case 'medium' was saved previously
+  if (savedDiff !== 'easy' && savedDiff !== 'hard') savedDiff = 'easy';
+  difficulty = savedDiff;
+  lobbyDiffBtns.forEach(function(b) {
+    b.classList.toggle('active', b.dataset.diff === savedDiff);
+  });
+
   // Switch to name screen
   screenGame.classList.remove('active');
   screenName.classList.add('active');
@@ -262,10 +278,17 @@ async function showLobby() {
 
 // Difficulty selection
 lobbyDiffBtns.forEach(function(btn) {
-  btn.addEventListener('click', function() {
+  btn.addEventListener('click', async function() {
     lobbyDiffBtns.forEach(function(b) { b.classList.remove('active'); });
     btn.classList.add('active');
     difficulty = btn.dataset.diff;
+    // Persist to Supabase user metadata
+    if (currentUser) {
+      try {
+        await supabase.auth.updateUser({ data: { difficulty: difficulty } });
+        if (currentUser.user_metadata) currentUser.user_metadata.difficulty = difficulty;
+      } catch(e) { console.warn('Difficulty save failed:', e); }
+    }
   });
 });
 
@@ -318,6 +341,30 @@ if (lobbyLogoutBtn) lobbyLogoutBtn.addEventListener('click', async function() {
   updateAuthUI(null);
 });
 
+// Exit game button — show confirm dialog
+if (btnExitGame) btnExitGame.addEventListener('click', function() {
+  if (exitConfirmOverlay) exitConfirmOverlay.classList.add('visible');
+});
+// Mobile exit button — same confirm dialog
+var btnExitGameMobile = document.getElementById('btn-exit-game-mobile');
+if (btnExitGameMobile) btnExitGameMobile.addEventListener('click', function() {
+  if (exitConfirmOverlay) exitConfirmOverlay.classList.add('visible');
+});
+// Confirm: leave
+if (exitConfirmYes) exitConfirmYes.addEventListener('click', function() {
+  if (exitConfirmOverlay) exitConfirmOverlay.classList.remove('visible');
+  // Reset end-game UI in case game just ended
+  if (endGameButtons) endGameButtons.classList.remove('visible');
+  document.getElementById('action-buttons').style.display = '';
+  hideEmailCapture();
+  game = null;
+  showLobby();
+});
+// Cancel: keep playing
+if (exitConfirmNo) exitConfirmNo.addEventListener('click', function() {
+  if (exitConfirmOverlay) exitConfirmOverlay.classList.remove('visible');
+});
+
 // ────────────────────────────────────────────────────────────────────────────────
 async function startGame() {
   game = createGame([playerName, 'Bot'], 'classic');
@@ -333,7 +380,37 @@ async function startGame() {
   logSessionStart(playerName, difficulty);
 
   if (scaleHumanTopTag) scaleHumanTopTag.textContent = playerName;
-  if (scaleBotTopTag)   scaleBotTopTag.textContent   = 'Bot';
+  botCharacter = getBotCharacter(difficulty);
+  // Human nameplate — monogram + name + title
+  var humanMonogram = document.getElementById('human-monogram');
+  var humanNameText = document.getElementById('human-name-text');
+  var humanTitleTag = document.getElementById('human-title-tag');
+  var initials = playerName.trim().split(/\s+/).map(function(w){ return w[0]; }).join('').substring(0,2).toUpperCase() || '??';
+  if (humanMonogram) humanMonogram.textContent = initials;
+  if (humanNameText) humanNameText.textContent  = playerName;
+  if (humanTitleTag) humanTitleTag.textContent  = 'The Challenger';
+  // Bot nameplate — monogram + name as separate spans
+  var botMonogram = document.getElementById('bot-monogram');
+  var botNameText = document.getElementById('bot-name-text');
+  if (botMonogram) botMonogram.textContent = botCharacter.monogram;
+  if (botNameText)  botNameText.textContent  = botCharacter.name;
+  // Mobile strip names + monograms
+  var stripBotName     = document.getElementById('strip-bot-name');
+  var stripBotMonogram = document.getElementById('strip-bot-monogram');
+  if (stripBotName)     stripBotName.textContent     = botCharacter.name;
+  if (stripBotMonogram) stripBotMonogram.textContent = botCharacter.monogram;
+  var stripHumanName = document.getElementById('strip-human-name');
+  if (stripHumanName) stripHumanName.textContent = playerName;
+
+  // Bot identity — title and difficulty class
+  var botTitleTag = document.getElementById('bot-title-tag');
+  if (botTitleTag) botTitleTag.textContent = botCharacter.title;
+  var scaleBotCol = document.getElementById('scale-bot-col');
+  if (scaleBotCol) {
+    scaleBotCol.classList.toggle('difficulty-hard', difficulty === 'hard');
+  }
+  // Reset bot dialogue turn flag
+  resetBotDialogueTurn();
 
   buildScaleZones(trackHuman, document.getElementById('labels-human'));
   buildScaleZones(trackBot,   document.getElementById('labels-bot'));
@@ -351,6 +428,7 @@ async function startGame() {
   // Tutorial / onboarding
   initTutorial(currentUser, setMessage);
   tutorialHook('game-start');
+  showBotLine('game-start');
 
   // Log first human turn start
   turnCounter++;
@@ -409,7 +487,7 @@ function handleRollResult() {
       logTurnStart(nh ? playerName : 'Bot', turnCounter, currentScores());
       setTurnUI(nh); resetDiceDisplay(); renderScales();
       if (nh) { setMessage('Your turn — roll the dice!', ''); enableActions(); }
-      else    { setMessage('Bot is thinking...', ''); scheduleBotAction(); }
+      else    { setMessage(botCharacter.name + ' is thinking...', ''); scheduleBotAction(); }
     }, DELAY_BIG);
     return;
   }
@@ -533,6 +611,7 @@ function handleRollResult() {
     }
     logTurnEnd('bust', null, currentScores());
     tutorialHook('first-bust');
+    showBotLine('player-busts');
     disableActions();
     setTimeout(function() {
       game = bankTurn(game);
@@ -595,8 +674,12 @@ function handleRollResult() {
       setMessage('🎲 Small Straight + Hot Dice!', 'good');
     } else if (hotCombo === 'Large Straight') {
       setMessage('🎲 Large Straight + Hot Dice!', 'good');
+    } else if (hotCombo === 'Five of a Kind') {
+      setMessage('🔥 Hot Dice!', 'good');
+      showBotLine('five-of-a-kind');
     } else {
       setMessage('🔥 Hot Dice — roll all 5!', 'good');
+      showBotLine('player-hot-dice');
     }
   }
 
@@ -640,6 +723,7 @@ btnBank.addEventListener('click', function() {
   game = bankTurn(game);
   logTurnEnd('banked', bankedPts, currentScores());
   tutorialHook('first-bank');
+  showBotLine('player-banks');
   // Fix 2: fire first-open only when the opening bank just happened
   if (!wasOpen && game.players[0] && game.players[0].isOpen) {
     tutorialHook('first-open');
@@ -731,7 +815,7 @@ function onBotRoll() {
       game.players[1].score = CONFIG.WINNING_SCORE;
       game.winner = 'Bot';
       renderDice(false); renderTurnInfo(); renderScales();
-      setMessage('🏆 Bot Barrel Win — Bot Wins!', 'bad');
+      setMessage('🏆 ' + botCharacter.name + ' Barrel Win — ' + botCharacter.name + ' Wins!', 'bad');;
       logEvent('BARREL_WIN', 'Bot hit exactly 1000 on Barrel — auto-win');
       logSessionEnd('Bot', currentScores());
       setTimeout(function() { showGameOver(false); }, 1200);
@@ -816,7 +900,7 @@ function onBotRoll() {
       game.players[1].score = CONFIG.WINNING_SCORE;
       game.winner = 'Bot';
       renderDice(false); renderTurnInfo(); renderScales();
-      setMessage('🤖 Bot Barrel Win — Bot Wins!', 'bad');
+      setMessage('🤖 ' + botCharacter.name + ' Barrel Win — ' + botCharacter.name + ' Wins!', 'bad');;
       logEvent('BARREL_WIN', 'Bot hit exactly 1000 on Barrel — auto-win');
       logSessionEnd('Bot', currentScores());
       setTimeout(function() { showGameOver(false); }, 1200);
@@ -847,7 +931,7 @@ function onBotRoll() {
       logEvent('AUTOWIN_CLAIMED', 'Bot claimed five-ones win');
       logSessionEnd('Bot', currentScores());
       renderScales();
-      setMessage('🌟 Bot rolled Five Ones — Bot wins!', 'bad');
+      setMessage('🌟 ' + botCharacter.name + ' rolled Five Ones — ' + botCharacter.name + ' wins!', 'bad');;
       setTimeout(function() { showGameOver(false); }, 1200);
       return;
     }
@@ -871,6 +955,7 @@ function onBotRoll() {
         logEvent('BOLT', 'Bot bolt ' + bolts + '/3');
       }
       logTurnEnd('bust', null, currentScores());
+      showBotLine('busting');
       game = bankTurn(game);
       setTimeout(function() {
         resetDiceDisplay(); renderScales();
@@ -893,8 +978,10 @@ function onBotRoll() {
     }
 
     renderDice(false); renderTurnInfo(); renderScales();
+    resetBotDialogueTurn();
     if (game.turn.hotDice) {
-      setMessage('🔥 Bot got Hot Dice!', 'good');
+      setMessage('🔥 ' + botCharacter.name + ' got Hot Dice!', 'good');
+      showBotLine('hot-dice');
     } else {
       var botNewlyRolled = (function() {
         var active = [];
@@ -908,13 +995,14 @@ function onBotRoll() {
         ? botRollResult.combinations.map(function(c){ return c.label; }).join(' + ')
         : '';
       if (botComboName === 'Small Straight') {
-        setMessage('🎲 Bot: Small Straight — 125 pts!', 'good big');
+        setMessage('🎲 ' + botCharacter.name + ': Small Straight — 125 pts!', 'good big');;
         logEvent('SMALL_STRAIGHT', 'Bot rolled a Small Straight +125');
       } else if (botComboName === 'Large Straight') {
-        setMessage('🎲 Bot: Large Straight — 250 pts!', 'good big');
+        setMessage('🎲 ' + botCharacter.name + ': Large Straight — 250 pts!', 'good big');;
         logEvent('LARGE_STRAIGHT', 'Bot rolled a Large Straight +250');
       } else {
-        setMessage('Bot scored ' + game.turn.turnScore + ' pts…', 'bot');
+        setMessage(botCharacter.name + ' scored ' + game.turn.turnScore + ' pts…', 'bot');;
+        showBotLine('rolling');
       }
     }
     scheduleBotAction();
@@ -926,7 +1014,9 @@ function onBotBank() {
   game = bankTurn(game);
   logTurnEnd('banked', bankedPts, currentScores());
   if (game.players[1] && game.players[1].isOnBarrel) logEvent('BARREL', 'Bot is on Barrel');
-  setMessage('Bot banks ' + bankedPts + ' pts!', 'good');
+  resetBotDialogueTurn();
+  showBotLine('banking');
+  setMessage(botCharacter.name + ' banks ' + bankedPts + ' pts!', 'good');;
   setTimeout(function() { handleBankResult(); }, 1000);
 }
 
@@ -1102,13 +1192,13 @@ function renderTurnInfo() {
   // Comms status strip
   if (commsTurnNum)   commsTurnNum.textContent   = turnCounter;
   if (commsWhoseTurn) {
-    commsWhoseTurn.textContent = isHuman ? 'Your turn' : "Bot's turn";
+    commsWhoseTurn.textContent = isHuman ? 'Your turn' : botCharacter.name + "'s turn";
     commsWhoseTurn.style.color = isHuman ? '' : '#c084fc';
   }
   if (commsTurnScore) commsTurnScore.textContent = ts > 0 ? '+' + ts + ' pts' : '';
   // Legacy sync
   if (narratorRound) narratorRound.textContent = 'Turn ' + turnCounter;
-  if (narratorTurn)  narratorTurn.textContent  = isHuman ? 'Your turn' : "Bot's turn";
+  if (narratorTurn)  narratorTurn.textContent  = isHuman ? 'Your turn' : botCharacter.name + "'s turn";
   if (narratorScore) narratorScore.textContent = ts > 0 ? '+' + ts : '';
   if (turnLabel)      turnLabel.textContent      = isHuman ? 'Your Turn' : "Bot's Turn";
   if (turnScoreEl)    turnScoreEl.textContent    = ts > 0 ? '+' + ts : '';
@@ -1220,13 +1310,14 @@ function resetDiceDisplay() {
 }
 
 function setTurnUI(isHuman) {
-  if (turnLabel) turnLabel.textContent = isHuman ? 'Your Turn' : "Bot's Turn";
+  var botName = botCharacter ? botCharacter.name : 'Bot';
+  if (turnLabel) turnLabel.textContent = isHuman ? 'Your Turn' : botName + "'s Turn";
   if (commsWhoseTurn) {
-    commsWhoseTurn.textContent = isHuman ? 'Your turn' : "Bot's turn";
+    commsWhoseTurn.textContent = isHuman ? 'Your turn' : botName + "'s turn";
     commsWhoseTurn.style.color = isHuman ? '' : '#c084fc';
   }
   if (narratorTurn) {
-    narratorTurn.textContent = isHuman ? 'Your turn' : "Bot's turn";
+    narratorTurn.textContent = isHuman ? 'Your turn' : botName + "'s turn";
     narratorTurn.style.color = isHuman ? '' : '#c084fc';
   }
   document.getElementById('table-inner').classList.toggle('bot-turn', !isHuman);
@@ -1320,7 +1411,8 @@ function showDumpTruck(whoName) {
 function showGameOver(humanWon) {
   logSessionEnd(humanWon ? playerName : 'Bot', currentScores());
   disableActions();
-  tutorialComplete(); // no-op if already completed or not in tutorial mode
+  tutorialComplete();
+  if (humanWon) showBotLine('losing'); else showBotLine('winning');
 
   // ── Step 1: scale blink on the winner's column ──
   var winnerCol = document.getElementById(humanWon ? 'scale-human-col' : 'scale-bot-col');
@@ -1330,9 +1422,9 @@ function showGameOver(humanWon) {
   }
 
   // ── Step 2: big winner toast (3 s hold) ──
-  var winnerName = humanWon ? playerName : 'Bot';
+  var winnerName = humanWon ? playerName : botCharacter.name;
   showToast(
-    humanWon ? '🏆' : '🤖',
+    humanWon ? '🏆' : '🎲',
     'And the winner is ' + winnerName + '!',
     humanWon ? 'Congratulations — you reached 1,000 points!' : 'Better luck next time!',
     'winner',
@@ -1343,7 +1435,7 @@ function showGameOver(humanWon) {
   if (humanWon) {
     setMessage('🏆 ' + playerName + ' wins! You reached 1,000!', 'good big');
   } else {
-    setMessage('🤖 Bot wins! Better luck next time.', 'bad big');
+    setMessage('🎲 ' + botCharacter.name + ' wins! Better luck next time.', 'bad big');
   }
 
   // ── Step 4: save score or show guest prompt ──
@@ -1525,6 +1617,54 @@ document.addEventListener('touchstart', function(e) {
   if (tooltipDismissTimer) clearTimeout(tooltipDismissTimer);
   tooltipDismissTimer = setTimeout(hideTooltip, 2000);
 }, { passive: true });
+
+// ─── BOT DIALOGUE SYSTEM ─────────────────────────────────────────────────────
+var _botSpokenThisTurn = false;
+var _botFadeTimer      = null;
+var SILENCE_CHANCE     = { easy: 0.25, hard: 0.45 };
+
+function showBotLine(trigger) {
+  if (_botSpokenThisTurn) return;
+  var line = getBotLine(botCharacter, trigger);
+  if (!line) return;
+  var silence = SILENCE_CHANCE[difficulty] || 0.3;
+  if (Math.random() < silence) return;
+
+  _botSpokenThisTurn = true;
+  if (_botFadeTimer) { clearTimeout(_botFadeTimer); _botFadeTimer = null; }
+
+  var quotedLine = '\u201c' + line + '\u201d';
+
+  // Desktop — overlay on bot scale-top-tag
+  var scaleBotTag      = document.getElementById('scale-bot-top-tag');
+  var scaleDialogue    = document.getElementById('scale-bot-dialogue');
+  if (scaleDialogue && scaleBotTag) {
+    scaleDialogue.textContent = quotedLine;
+    scaleBotTag.style.opacity = '0';
+    scaleDialogue.classList.add('visible');
+  }
+
+  // Mobile — dialogue row below strip name
+  var stripDialogue = document.getElementById('strip-bot-dialogue');
+  if (stripDialogue) {
+    stripDialogue.textContent = quotedLine;
+    stripDialogue.classList.add('visible');
+  }
+
+  _botFadeTimer = setTimeout(function() {
+    if (scaleDialogue) scaleDialogue.classList.remove('visible');
+    if (stripDialogue) stripDialogue.classList.remove('visible');
+    _botFadeTimer = setTimeout(function() {
+      if (scaleBotTag) scaleBotTag.style.opacity = '';
+      if (scaleDialogue) scaleDialogue.textContent = '';
+      if (stripDialogue) stripDialogue.textContent = '';
+    }, 350);
+  }, 3200);
+}
+
+function resetBotDialogueTurn() {
+  _botSpokenThisTurn = false;
+}
 
 // ─── LOG EXPORT BUTTON ────────────────────────────────────────────────────────
 (function() {

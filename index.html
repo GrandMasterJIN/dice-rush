@@ -135,7 +135,6 @@
         <div class="difficulty-row" style="margin-bottom:4px">
           <span class="diff-label">Difficulty:</span>
           <button class="diff-btn active" data-diff="easy" id="lobby-diff-easy">Easy</button>
-          <button class="diff-btn" data-diff="medium" id="lobby-diff-medium">Medium</button>
           <button class="diff-btn" data-diff="hard" id="lobby-diff-hard">Hard</button>
         </div>
 
@@ -178,10 +177,23 @@
 
     <!-- AUTH BADGE (top-right, shown when logged in) -->
     <div id="auth-badge-wrap">
+      <button id="btn-exit-game" aria-label="Exit to lobby">&larr; Lobby</button>
       <div id="auth-badge"></div>
       <button id="btn-settings" aria-label="Game settings">⚙</button>
       <div id="auth-dropdown">
         <button id="auth-logout-btn">Log Out</button>
+      </div>
+    </div>
+
+    <!-- EXIT CONFIRM DIALOG -->
+    <div id="exit-confirm-overlay">
+      <div id="exit-confirm-modal">
+        <p id="exit-confirm-title">Leave the game?</p>
+        <p id="exit-confirm-sub">Your current progress will be lost.</p>
+        <div id="exit-confirm-btns">
+          <button id="exit-confirm-yes">Leave</button>
+          <button id="exit-confirm-no">Keep Playing</button>
+        </div>
       </div>
     </div>
 
@@ -208,8 +220,11 @@
 
       <!-- LEFT SCALE: Human -->
       <div class="scale-column" id="scale-human-col">
-        <!-- Player name replaces BARREL tag -->
-        <div class="scale-top-tag" id="scale-human-top-tag">You</div>
+        <div class="scale-top-tag" id="scale-human-top-tag">
+          <span id="human-monogram">—</span>
+          <span id="human-name-text">You</span>
+        </div>
+        <div id="human-title-tag" class="scale-name-plate">The Challenger</div>
         <div class="scale-bolts-row">
           <span class="scale-bolt-pip" id="bolt-h-0" data-tooltip="Bolt 1/3 — roll zero 3 times and lose 100 pts." aria-label="Bolt 1 of 3">⚡</span>
           <span class="scale-bolt-pip" id="bolt-h-1" data-tooltip="Bolt 2/3 — roll zero 3 times and lose 100 pts." aria-label="Bolt 2 of 3">⚡</span>
@@ -302,10 +317,14 @@
         </div>
       </div>
 
-      <!-- RIGHT SCALE: Bot -->
+      <!-- Right SCALE: Bot character (name set dynamically on game start) -->
       <div class="scale-column" id="scale-bot-col">
-        <!-- Bot name replaces JACKPOT tag -->
-        <div class="scale-top-tag" id="scale-bot-top-tag">Bot</div>
+        <div class="scale-top-tag" id="scale-bot-top-tag">
+          <span id="bot-monogram">—</span>
+          <span id="bot-name-text"></span>
+        </div>
+        <div class="scale-dialogue" id="scale-bot-dialogue"></div>
+        <div id="bot-title-tag" class="scale-name-plate"></div>
         <div class="scale-bolts-row">
           <span class="scale-bolt-pip" id="bolt-b-0" data-tooltip="Bolt 1/3 — roll zero 3 times and lose 100 pts." aria-label="Bolt 1 of 3">⚡</span>
           <span class="scale-bolt-pip" id="bolt-b-1" data-tooltip="Bolt 2/3 — roll zero 3 times and lose 100 pts." aria-label="Bolt 2 of 3">⚡</span>
@@ -331,6 +350,9 @@
       </div>
 
       <!-- MOBILE STRIPS (hidden on desktop, shown on mobile) -->
+      <div id="mobile-top-bar" class="mobile-strip">
+        <button id="btn-exit-game-mobile" aria-label="Exit to lobby">&larr; Lobby</button>
+      </div>
       <div id="strip-human" class="mobile-strip">
         <div class="strip-top-row">
           <span class="strip-name" id="strip-human-name">You</span>
@@ -352,12 +374,14 @@
 
       <div id="strip-bot" class="mobile-strip">
         <div class="strip-top-row">
+          <span class="strip-monogram" id="strip-bot-monogram"></span>
           <span class="strip-name" id="strip-bot-name">Bot</span>
           <span class="strip-lock" id="strip-bot-lock">🔒</span>
           <span class="strip-lock-label" id="strip-bot-lock-label">Locked</span>
           <span class="strip-bolts" id="strip-bot-bolts">⚡⚡⚡</span>
           <span class="strip-score" id="strip-bot-score">0</span>
         </div>
+        <div class="strip-dialogue" id="strip-bot-dialogue"></div>
         <div class="strip-bar-wrap">
           <div class="strip-bar-track">
             <div class="strip-zone strip-barrel" id="strip-bot-barrel"><span>🛢 Barrel</span></div>
