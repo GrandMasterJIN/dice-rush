@@ -35,6 +35,7 @@ var game       = null;
 var playerName = 'You';
 var difficulty = 'easy';
 var botCharacter = getBotCharacter('easy'); // set fresh on each startGame()
+var _botScoreBeforeTurn = 0; // tracks bot score at start of its turn for surge detection
 
 // ─── ELEMENT REFS ─────────────────────────────────────────────────────────────
 var screenName  = document.getElementById('screen-name');
@@ -790,6 +791,8 @@ function handleBankResult() {
 // ─── BOT ──────────────────────────────────────────────────────────────────────
 function scheduleBotAction() {
   disableActions();
+  // Capture bot score before turn for surge detection
+  if (game && game.players[1]) _botScoreBeforeTurn = game.players[1].score;
   setTimeout(function() {
     if (!game || game.currentPlayerIndex !== 1) return;
     if (botDecision(game, difficulty) === 'bank') onBotBank(); else onBotRoll();
@@ -1321,6 +1324,40 @@ function setTurnUI(isHuman) {
     narratorTurn.style.color = isHuman ? '' : '#c084fc';
   }
   document.getElementById('table-inner').classList.toggle('bot-turn', !isHuman);
+  // Bot threat message — shown when switching back to human's turn
+  if (isHuman && game) {
+    var threat = getBotThreatMessage();
+    if (threat) {
+      setTimeout(function() { setMessage(threat.text, threat.skin); }, 600);
+    }
+  }
+}
+
+// Returns a threat message if the bot is in a dangerous position, null otherwise.
+function getBotThreatMessage() {
+  if (!game || !game.players[1]) return null;
+  var bot    = game.players[1];
+  var score  = bot.score;
+  var needed = 1000 - score;
+  // Highest priority first
+  if (bot.isOnBarrel && score >= 950) {
+    return { text: '🚨 ' + botCharacter.name + ' needs just ' + needed + ' pts to win!', skin: 'bad' };
+  }
+  if (bot.isOnBarrel) {
+    return { text: '⚠️ ' + botCharacter.name + ' is on the Barrel — one good roll wins it!', skin: 'warn' };
+  }
+  // Surge: bot gained 200+ in one turn
+  var surge = score - _botScoreBeforeTurn;
+  if (surge >= 200) {
+    return { text: '📈 ' + botCharacter.name + ' just gained ' + surge + ' pts in one turn!', skin: 'warn' };
+  }
+  if (score >= CONFIG.PIT1_MIN && score <= CONFIG.PIT1_MAX) {
+    return { text: botCharacter.name + ' is in Pit 1 — they need to score out.', skin: 'neutral' };
+  }
+  if (score >= CONFIG.PIT2_MIN && score <= CONFIG.PIT2_MAX) {
+    return { text: botCharacter.name + ' is in Pit 2 — they need to score out.', skin: 'neutral' };
+  }
+  return null;
 }
 
 function enableActions()  {

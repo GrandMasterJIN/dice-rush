@@ -1,7 +1,7 @@
 {
-  "name": "web-mvp",
-  "version": "0.0.0",
-  "private": true,
+  "name": "dice-rush",
+  "version": "1.0.0",
+  "private": false,
   "type": "module",
   "scripts": {
     "dev": "vite",
