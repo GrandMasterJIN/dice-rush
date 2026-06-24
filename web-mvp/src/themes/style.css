@@ -1831,6 +1831,7 @@ body::after {
 #btn-exit-to-lobby {
   flex: 1;
   padding: 14px 8px;
+}
 
 /* ──────────────────────────────────────────────────────────────────────
    Driver.js popover — oak/brass theme
