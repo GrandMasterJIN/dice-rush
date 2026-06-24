@@ -1,5 +1,5 @@
-// authModal.js — Auth modal UI controller for Dice Rush
-import { signUp, signIn, signOut, resetPassword } from './auth.js';
+// authModal.js — Auth modal UI controller for Dice Rush (Firebase)
+import { signUp, signIn, signInWithGoogle, signOut, resetPassword } from './auth.js';
 
 var modal        = null;
 var overlay      = null;
@@ -21,6 +21,10 @@ export function initAuthModal(authChangeCallback, entryAuthCallback) {
   document.getElementById('entry-reset-form').addEventListener('submit',  handleEntryReset);
   document.getElementById('entry-forgot-link').addEventListener('click',  () => showEntryTab('reset'));
   document.getElementById('entry-back-link').addEventListener('click',    () => showEntryTab('login'));
+
+  // ── Google SSO buttons (entry screen) ──
+  var entryGoogleBtn = document.getElementById('entry-google-btn');
+  if (entryGoogleBtn) entryGoogleBtn.addEventListener('click', handleEntryGoogle);
 
   // ── Badge dropdown (game screen) ──
   var logoutBtn = document.getElementById('auth-logout-btn');
@@ -47,6 +51,10 @@ export function initAuthModal(authChangeCallback, entryAuthCallback) {
     document.getElementById('auth-back-link').addEventListener('click',    () => showTab('login'));
     overlay.addEventListener('click', hideAuthModal);
     document.getElementById('auth-close').addEventListener('click', hideAuthModal);
+
+    // Google SSO in floating modal
+    var modalGoogleBtn = document.getElementById('modal-google-btn');
+    if (modalGoogleBtn) modalGoogleBtn.addEventListener('click', handleModalGoogle);
   }
 }
 
@@ -68,7 +76,7 @@ export function updateAuthUI(user) {
   var guestPrompt  = document.getElementById('auth-guest-prompt');
 
   if (user) {
-    var username = user.user_metadata?.username || user.email || '?';
+    var username = user.displayName || user.email || '?';
     var initials = username.slice(0, 2).toUpperCase();
     if (badge)       { badge.textContent = initials; badge.classList.add('visible'); }
     if (loginLinks)  loginLinks.style.display = 'none';
@@ -89,10 +97,25 @@ function showEntryTab(tab) {
     if (panel) panel.style.display = t === tab ? 'flex' : 'none';
     if (btn)   btn.classList.toggle('active', t === tab);
   });
-  // Scroll card to top so the form is always visible
   var card = document.querySelector('.name-card');
   if (card) card.scrollTop = 0;
   clearEntryErrors();
+}
+
+async function handleEntryGoogle() {
+  clearEntryErrors();
+  setEntryGoogleLoading(true);
+  try {
+    var user = await signInWithGoogle();
+    if (onEntryAuth) onEntryAuth(user);
+  } catch (err) {
+    // User closed popup — not really an error
+    if (err.code !== 'auth/popup-closed-by-user') {
+      showEntryError('login', err.message);
+    }
+  } finally {
+    setEntryGoogleLoading(false);
+  }
 }
 
 async function handleEntrySignup(e) {
@@ -107,10 +130,10 @@ async function handleEntrySignup(e) {
   if (password.length < 6)   return showEntryError('signup', 'Password must be at least 6 characters.');
   setEntryLoading('signup', true);
   try {
-    var data = await signUp(email, password, username);
-    if (onEntryAuth) onEntryAuth(data.user);
+    var user = await signUp(email, password, username);
+    if (onEntryAuth) onEntryAuth(user);
   } catch (err) {
-    showEntryError('signup', err.message);
+    showEntryError('signup', friendlyError(err));
   } finally {
     setEntryLoading('signup', false);
   }
@@ -123,10 +146,10 @@ async function handleEntryLogin(e) {
   var password = document.getElementById('entry-login-password').value;
   setEntryLoading('login', true);
   try {
-    var data = await signIn(email, password);
-    if (onEntryAuth) onEntryAuth(data.user);
+    var user = await signIn(email, password);
+    if (onEntryAuth) onEntryAuth(user);
   } catch (err) {
-    showEntryError('login', err.message);
+    showEntryError('login', friendlyError(err));
   } finally {
     setEntryLoading('login', false);
   }
@@ -141,7 +164,7 @@ async function handleEntryReset(e) {
     await resetPassword(email);
     showEntryError('reset', 'Password reset email sent — check your inbox.', 'good');
   } catch (err) {
-    showEntryError('reset', err.message);
+    showEntryError('reset', friendlyError(err));
   } finally {
     setEntryLoading('reset', false);
   }
@@ -164,7 +187,25 @@ function setEntryLoading(form, loading) {
   if (btn) { btn.disabled = loading; btn.textContent = loading ? 'Please wait…' : btn.dataset.label; }
 }
 
+function setEntryGoogleLoading(loading) {
+  var btn = document.getElementById('entry-google-btn');
+  if (btn) { btn.disabled = loading; btn.textContent = loading ? 'Signing in…' : 'Continue with Google'; }
+}
+
 // ─── Floating modal handlers ──────────────────────────────────────────────────
+
+async function handleModalGoogle() {
+  clearErrors();
+  try {
+    var user = await signInWithGoogle();
+    hideAuthModal();
+    if (onAuthChange) onAuthChange(user);
+  } catch (err) {
+    if (err.code !== 'auth/popup-closed-by-user') {
+      showError('login', err.message);
+    }
+  }
+}
 
 async function handleLogin(e) {
   e.preventDefault();
@@ -173,11 +214,11 @@ async function handleLogin(e) {
   var password = document.getElementById('login-password').value;
   setLoading('login', true);
   try {
-    var data = await signIn(email, password);
+    var user = await signIn(email, password);
     hideAuthModal();
-    if (onAuthChange) onAuthChange(data.user);
+    if (onAuthChange) onAuthChange(user);
   } catch (err) {
-    showError('login', err.message);
+    showError('login', friendlyError(err));
   } finally {
     setLoading('login', false);
   }
@@ -197,11 +238,11 @@ async function handleSignup(e) {
 
   setLoading('signup', true);
   try {
-    var data = await signUp(email, password, username);
+    var user = await signUp(email, password, username);
     hideAuthModal();
-    if (onAuthChange) onAuthChange(data.user);
+    if (onAuthChange) onAuthChange(user);
   } catch (err) {
-    showError('signup', err.message);
+    showError('signup', friendlyError(err));
   } finally {
     setLoading('signup', false);
   }
@@ -216,7 +257,7 @@ async function handleReset(e) {
     await resetPassword(email);
     showError('reset', 'Password reset email sent — check your inbox.', 'good');
   } catch (err) {
-    showError('reset', err.message);
+    showError('reset', friendlyError(err));
   } finally {
     setLoading('reset', false);
   }
@@ -227,7 +268,6 @@ async function handleLogout() {
     await signOut();
     if (onAuthChange) onAuthChange(null);
     document.getElementById('auth-dropdown').classList.remove('visible');
-    // Return to entry screen
     var screenGame = document.getElementById('screen-game');
     var screenName = document.getElementById('screen-name');
     if (screenGame) screenGame.classList.remove('active');
@@ -270,5 +310,20 @@ function setLoading(form, loading) {
   if (btn) {
     btn.disabled     = loading;
     btn.textContent  = loading ? 'Please wait…' : btn.dataset.label;
+  }
+}
+
+// Convert Firebase error codes to friendly messages
+function friendlyError(err) {
+  switch (err.code) {
+    case 'auth/email-already-in-use':    return 'That email is already registered.';
+    case 'auth/invalid-email':           return 'Please enter a valid email address.';
+    case 'auth/weak-password':           return 'Password must be at least 6 characters.';
+    case 'auth/user-not-found':          return 'No account found with that email.';
+    case 'auth/wrong-password':          return 'Incorrect password.';
+    case 'auth/invalid-credential':      return 'Incorrect email or password.';
+    case 'auth/too-many-requests':       return 'Too many attempts — please try again later.';
+    case 'auth/network-request-failed':  return 'Network error — check your connection.';
+    default:                             return err.message;
   }
 }

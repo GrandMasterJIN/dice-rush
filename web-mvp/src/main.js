@@ -5,8 +5,8 @@ import { botDecision } from './logic/bot.js';
 import { getBotCharacter, getBotLine } from './logic/botCharacter.js';
 import { initDice3D } from './dice3d.js';
 import { logSessionStart, logTurnStart, logRoll, logTurnEnd, logEvent, logSessionEnd, exportLog } from './sessionLogger.js';
-import { getSession, saveScore } from './auth.js';
-import { supabase } from './supabase.js';
+import { saveScore, onAuthChange as firebaseOnAuthChange, getProfile, updateProfile_ } from './auth.js';
+import { auth } from './firebase.js';
 import { initAuthModal, showAuthModal, updateAuthUI } from './authModal.js';
 import { initTutorial, tutorialHook, tutorialComplete, getHintsEnabled, getTutorialCompleted, setHintsEnabled, replayTutorial } from './tutorial.js';
 
@@ -20,8 +20,7 @@ function onAuthChange(user) {
   currentUser = user;
   updateAuthUI(user);
   if (user) {
-    // Pre-fill name from username if name screen is still showing
-    var username = user.user_metadata?.username || '';
+    var username = user.displayName || '';
     if (username && inputName) inputName.value = username;
     playerName = username || playerName;
   }
@@ -236,11 +235,11 @@ document.querySelectorAll('.diff-btn').forEach(function(btn) {
 // ─── LOBBY ──────────────────────────────────────────────────────────────────────────────
 
 async function showLobby() {
-  // Re-fetch user to get latest metadata (e.g. tutorial_completed updated mid-session)
+  // Re-fetch user profile to get latest prefs
   try {
-    var { data } = await supabase.auth.getUser();
-    if (data && data.user) {
-      currentUser = data.user;
+    var firebaseUser = auth.currentUser;
+    if (firebaseUser) {
+      currentUser = firebaseUser;
       updateAuthUI(currentUser);
     }
   } catch(e) { console.warn('showLobby getUser failed:', e); }
@@ -251,20 +250,23 @@ async function showLobby() {
   if (lobbyPanel) lobbyPanel.style.display = 'block';
 
   // Pre-fill username
-  var username = currentUser ? (currentUser.user_metadata?.username || currentUser.email || '') : '';
+  var username = currentUser ? (currentUser.displayName || currentUser.email || '') : '';
   if (lobbyUsername) lobbyUsername.textContent = username || 'Player';
   if (lobbyNameInput) lobbyNameInput.value = username;
 
+  // Load prefs from Firestore profile
+  var profile = currentUser ? (await getProfile(currentUser.uid) || {}) : {};
+
   // Sync hints toggle
-  var hintsOn = currentUser ? (currentUser.user_metadata?.hints_enabled ?? true) : true;
+  var hintsOn = profile.hints_enabled !== undefined ? profile.hints_enabled : true;
   if (lobbyHintsToggle) lobbyHintsToggle.setAttribute('aria-checked', hintsOn ? 'true' : 'false');
 
   // Show replay tutorial row only if tutorial completed
-  var tutDone = currentUser ? (currentUser.user_metadata?.tutorial_completed ?? false) : false;
+  var tutDone = profile.tutorial_completed || false;
   if (lobbyReplayRow) lobbyReplayRow.style.display = tutDone ? 'flex' : 'none';
 
   // Restore last selected difficulty (default 'easy')
-  var savedDiff = currentUser ? (currentUser.user_metadata?.difficulty || 'easy') : 'easy';
+  var savedDiff = profile.difficulty || 'easy';
   // Clamp to valid values in case 'medium' was saved previously
   if (savedDiff !== 'easy' && savedDiff !== 'hard') savedDiff = 'easy';
   difficulty = savedDiff;
@@ -283,11 +285,10 @@ lobbyDiffBtns.forEach(function(btn) {
     lobbyDiffBtns.forEach(function(b) { b.classList.remove('active'); });
     btn.classList.add('active');
     difficulty = btn.dataset.diff;
-    // Persist to Supabase user metadata
+    // Persist to Firestore user profile
     if (currentUser) {
       try {
-        await supabase.auth.updateUser({ data: { difficulty: difficulty } });
-        if (currentUser.user_metadata) currentUser.user_metadata.difficulty = difficulty;
+        await updateProfile_(currentUser.uid, { difficulty: difficulty });
       } catch(e) { console.warn('Difficulty save failed:', e); }
     }
   });
@@ -320,8 +321,7 @@ if (lobbyPlayBtn) lobbyPlayBtn.addEventListener('click', async function() {
     playerName = newName;
     if (lobbyUsername) lobbyUsername.textContent = newName;
     try {
-      await supabase.auth.updateUser({ data: { username: newName } });
-      if (currentUser.user_metadata) currentUser.user_metadata.username = newName;
+      await updateProfile_(currentUser.uid, { username: newName });
     } catch(e) { console.warn('Name save failed:', e); }
   }
   screenName.classList.remove('active');
@@ -331,8 +331,7 @@ if (lobbyPlayBtn) lobbyPlayBtn.addEventListener('click', async function() {
 
 // Log out
 if (lobbyLogoutBtn) lobbyLogoutBtn.addEventListener('click', async function() {
-  await supabase.auth.signOut();
-  // Hide lobby, show auth panels
+  await auth.signOut();
   if (lobbyPanel) lobbyPanel.style.display = 'none';
   var authPanels = document.querySelectorAll('.entry-auth-panel, .entry-auth-tabs');
   authPanels.forEach(function(el) { el.style.removeProperty('display'); });
@@ -1533,8 +1532,8 @@ if (btnPlayAgain) btnPlayAgain.addEventListener('click', function() {
 var tooltipDismissTimer = null;
 
 // ─── EMAIL CAPTURE ─────────────────────────────────────────────────────────
-var SUPABASE_URL = 'https://jchueroccwbpkfiodchn.supabase.co';
-var SUPABASE_KEY = 'sb_publishable_yJ_9Vy6_MTGbGlDtUo2WBQ_FwBvf3dQ';
+var SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+var SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 var EMAIL_STORAGE_KEY = 'diceRush_emailCaptured';
 var emailCaptureEl = null;
 
@@ -1715,11 +1714,11 @@ function resetBotDialogueTurn() {
 
 // ─── AUTH INIT ───────────────────────────────────────────────────────────────
 (async function initAuth() {
-  // Called when entry screen auth succeeds — start the game
+  // Called when entry screen auth succeeds — go to lobby
   function onEntryAuth(user) {
     currentUser = user;
     updateAuthUI(user);
-    var username = user.user_metadata?.username || user.email || 'Player';
+    var username = user.displayName || user.email || 'Player';
     playerName = username;
     showLobby();
   }
@@ -1733,46 +1732,24 @@ function resetBotDialogueTurn() {
   if (goSignupBtn) goSignupBtn.addEventListener('click', function() { showAuthModal('signup'); });
   if (goLoginBtn)  goLoginBtn.addEventListener('click',  function() { showAuthModal('login');  });
 
-  // Listen for Supabase auth events (token refresh, sign-out from another tab, etc.)
-  // We handle this here instead of ignoring it, so currentUser stays in sync
-  // without disrupting an in-progress game.
-  supabase.auth.onAuthStateChange(function(event, session) {
-    if (event === 'TOKEN_REFRESHED') {
-      // Silently update currentUser — no screen change, no game reset
-      if (session) {
-        currentUser = session.user;
-        updateAuthUI(currentUser);
+  // Listen for Firebase auth state changes
+  firebaseOnAuthChange(function(user) {
+    if (user) {
+      // Session restored or token refreshed — silently update currentUser
+      currentUser = user;
+      updateAuthUI(user);
+      if (!game) {
+        var username = user.displayName || user.email || 'Player';
+        playerName = username;
+        showLobby();
       }
-    } else if (event === 'SIGNED_OUT') {
-      // Only act on explicit sign-out (e.g. another tab logged out)
+    } else {
+      // Signed out
       if (game) return; // don't interrupt a game in progress
       currentUser = null;
       updateAuthUI(null);
     }
-    // SIGNED_IN is handled by onEntryAuth / handleLogin — ignore here
   });
-
-  // Restore session silently on load — skip entry screen if already logged in
-  try {
-    var data = await getSession();
-    if (data.session) {
-      currentUser = data.session.user;
-      updateAuthUI(currentUser);
-      var username = currentUser.user_metadata?.username || currentUser.email || 'Player';
-      playerName = username;
-      if (inputName) inputName.value = username;
-      // Only auto-start if a game isn't already running
-      if (!game) {
-        showLobby();
-      }
-    } else {
-      updateAuthUI(null);
-      // Stay on entry screen — user must log in or sign up
-    }
-  } catch (e) {
-    console.warn('Session restore failed:', e);
-    updateAuthUI(null);
-  }
 })();
 
 // Calibration panel removed — Rapier physics reads faces via quaternion, no snapping needed.
