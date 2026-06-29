@@ -379,7 +379,6 @@ async function startGame() {
   // Session logger
   logSessionStart(playerName, difficulty);
 
-  if (scaleHumanTopTag) scaleHumanTopTag.textContent = playerName;
   botCharacter = getBotCharacter(difficulty);
   // Human nameplate — monogram + name + title
   var humanMonogram = document.getElementById('human-monogram');
@@ -389,6 +388,19 @@ async function startGame() {
   if (humanMonogram) humanMonogram.textContent = initials;
   if (humanNameText) humanNameText.textContent  = playerName;
   if (humanTitleTag) humanTitleTag.textContent  = 'The Challenger';
+  // Check if name overflows and apply long-name class if needed
+  if (humanNameText) {
+    var topTag = document.getElementById('scale-human-top-tag');
+    if (topTag) {
+      topTag.classList.remove('name-long');
+      // Use requestAnimationFrame to measure after render
+      requestAnimationFrame(function() {
+        if (humanNameText.scrollWidth > humanNameText.offsetWidth) {
+          topTag.classList.add('name-long');
+        }
+      });
+    }
+  }
   // Bot nameplate — monogram + name as separate spans
   var botMonogram = document.getElementById('bot-monogram');
   var botNameText = document.getElementById('bot-name-text');

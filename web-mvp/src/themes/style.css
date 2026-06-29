@@ -425,14 +425,17 @@ body::after {
   color: var(--brass-light);
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  text-align: center;
   width: 100%;
+  max-width: 100%;
   margin-bottom: 6px;
   line-height: 1.2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   text-shadow: 0 0 10px rgba(200,160,40,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 7px;
+  flex-wrap: nowrap;
+  overflow: hidden;
 }
 
 /* Name plate */
@@ -458,13 +461,6 @@ body::after {
 }
 
 /* ── Martha Sneider monogram badge ── */
-.scale-top-tag {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  flex-wrap: nowrap;
-}
 #bot-monogram,
 #human-monogram {
   display: inline-flex;
@@ -493,8 +489,21 @@ body::after {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 120px;
-  display: block;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Long name — smaller font, two lines allowed */
+.scale-top-tag.name-long #human-name-text,
+.scale-top-tag.name-long #bot-name-text {
+  font-size: 10px;
+  white-space: normal;
+  line-height: 1.2;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  text-overflow: unset;
 }
 
 /* ── Nameplate dialogue swap ── */
