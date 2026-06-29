@@ -407,12 +407,14 @@ async function startGame() {
   if (botMonogram) botMonogram.textContent = botCharacter.monogram;
   if (botNameText)  botNameText.textContent  = botCharacter.name;
   // Mobile strip names + monograms
-  var stripBotName     = document.getElementById('strip-bot-name');
-  var stripBotMonogram = document.getElementById('strip-bot-monogram');
-  if (stripBotName)     stripBotName.textContent     = botCharacter.name;
-  if (stripBotMonogram) stripBotMonogram.textContent = botCharacter.monogram;
-  var stripHumanName = document.getElementById('strip-human-name');
-  if (stripHumanName) stripHumanName.textContent = playerName;
+  var stripBotName      = document.getElementById('strip-bot-name');
+  var stripBotMonogram  = document.getElementById('strip-bot-monogram');
+  var stripHumanName    = document.getElementById('strip-human-name');
+  var stripHumanMonogram = document.getElementById('strip-human-monogram');
+  if (stripBotName)      stripBotName.textContent      = botCharacter.name;
+  if (stripBotMonogram)  stripBotMonogram.textContent  = botCharacter.monogram;
+  if (stripHumanName)    stripHumanName.textContent    = playerName;
+  if (stripHumanMonogram) stripHumanMonogram.textContent = initials;
 
   // Bot identity — title and difficulty class
   var botTitleTag = document.getElementById('bot-title-tag');
