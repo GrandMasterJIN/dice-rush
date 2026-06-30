@@ -1927,11 +1927,17 @@ body::after {
    Mobile strips — hidden on desktop, shown ≤480px
 ────────────────────────────────────────────────────────────────────── */
 .mobile-strip { display: none; }
+#strips-row { display: none; }
 
 @media (max-width: 480px) {
   /* Hide desktop side columns */
   #scale-human-col,
   #scale-bot-col { display: none !important; }
+
+  /* Strips row — portrait stacks strips vertically (no row layout) */
+  #strips-row {
+    display: contents;
+  }
 
   /* Game layout — full height column, score strips on top */
   #game-layout {
@@ -2999,4 +3005,233 @@ body::after {
   text-transform: uppercase;
   letter-spacing: 0.15em;
   color: var(--brass-dim);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   MOBILE LANDSCAPE
+   Targets phones in landscape (max-height ~430px, wider than tall)
+   Reuses mobile strip elements side-by-side to save vertical space
+══════════════════════════════════════════════════════════════════════ */
+@media (max-height: 430px) and (orientation: landscape) and (max-width: 926px) {
+
+  /* Hide desktop scale columns */
+  #scale-human-col,
+  #scale-bot-col { display: none !important; }
+
+  /* Full viewport, no scroll */
+  #screen-game { height: 100dvh; overflow: hidden; }
+
+  /* Game layout — column, everything stacked */
+  #game-layout {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    padding: 0;
+    gap: 0;
+    height: 100%;
+  }
+
+  /* ── Compact header: lobby btn + both strips side by side ── */
+  #mobile-top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 4px 8px;
+    background: rgba(6,2,0,0.97);
+    border-bottom: 1px solid rgba(138,92,26,0.3);
+    order: 0;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  #btn-exit-game-mobile {
+    background: transparent;
+    border: 1px solid var(--brass-dim);
+    border-radius: 6px;
+    padding: 3px 10px;
+    font-family: 'Crimson Pro', serif;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--brass-dim);
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* Both strips side by side inside strips-row */
+  #strips-row {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    background: rgba(6,2,0,0.97);
+    border-bottom: 2px solid rgba(138,92,26,0.4);
+    flex-shrink: 0;
+  }
+
+  #strip-human,
+  #strip-bot {
+    display: block !important;
+    flex: 1;
+    background: transparent;
+    padding: 4px 8px;
+    box-sizing: border-box;
+    border: none;
+    min-width: 0;
+  }
+
+  #strip-human {
+    border-right: 1px solid rgba(138,92,26,0.35);
+  }
+
+  /* Strip top row — tighter */
+  .strip-top-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 3px;
+    font-family: 'Crimson Pro', serif;
+  }
+
+  .strip-monogram {
+    width: 18px !important;
+    height: 18px !important;
+    font-size: 7px !important;
+    flex-shrink: 0;
+  }
+
+  .strip-name {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--brass-light);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    flex-shrink: 1;
+    min-width: 30px;
+    max-width: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .strip-lock { font-size: 11px; flex-shrink: 0; }
+  .strip-lock-label { font-size: 10px; color: var(--brass-dim); flex-shrink: 0; }
+
+  .strip-bolts {
+    font-size: 9px;
+    flex: 1;
+    text-align: center;
+    letter-spacing: 1px;
+    opacity: 0.8;
+  }
+
+  .strip-score {
+    font-family: 'Playfair Display', serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--gold-light);
+    flex-shrink: 0;
+    min-width: 32px;
+    text-align: right;
+  }
+
+  /* Progress bar — thinner */
+  .strip-bar-wrap { width: 100%; }
+  .strip-bar-track {
+    height: 10px;
+    background: #1a1a0a;
+    border-radius: 5px;
+    overflow: hidden;
+    border: 1px solid rgba(200,144,32,0.15);
+    position: relative;
+    width: 100%;
+  }
+
+  .strip-fill {
+    position: absolute;
+    top: 0; left: 0;
+    height: 100%;
+    background: linear-gradient(90deg, #1a5c1a, #2a8a2a);
+    border-radius: 4px;
+    transition: width 0.4s ease;
+    z-index: 1;
+  }
+
+  .strip-marker {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: #4aaa4a;
+    border: 1px solid rgba(255,255,255,0.8);
+    z-index: 3;
+    transition: left 0.4s ease;
+  }
+
+  /* Center panel fills remaining height */
+  #center-panel {
+    width: 100%;
+    min-width: 0;
+    order: 1;
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  /* Table frame fills remaining space */
+  #table-frame {
+    flex: 1;
+    border-radius: 6px;
+    padding: 2px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  #table-inner {
+    justify-content: flex-start;
+    padding: 2px 4px 4px;
+    flex: 1;
+    min-height: 0;
+  }
+
+  /* Dice area fills all remaining space */
+  #dice-area { flex: 1; min-height: 0; }
+
+  /* Comms panel — very compact */
+  #comms-panel {
+    height: 60px !important;
+    min-height: 60px !important;
+    font-size: 12px;
+    padding: 4px 8px !important;
+  }
+
+  #comms-turn-line { font-size: 11px; }
+  #comms-message   { font-size: 12px; }
+
+  /* Action buttons — compact */
+  #action-buttons {
+    display: flex;
+    width: 100%;
+    gap: 4px;
+    padding: 0;
+  }
+
+  #action-buttons .btn-roll,
+  #action-buttons .btn-bank {
+    flex: 1;
+    font-size: 14px;
+    padding: 8px 6px;
+  }
+
+  .btn-bank { display: none; }
+  #action-buttons.bank-available .btn-bank {
+    display: block;
+    flex: 2;
+  }
+
+  /* Hide auth badge — no room */
+  #auth-badge-wrap { display: none !important; }
+  #btn-export-log  { display: none !important; }
 }
