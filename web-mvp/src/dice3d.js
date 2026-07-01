@@ -451,16 +451,15 @@ export async function initDice3D(canvasId) {
   requestAnimationFrame(animate);
 
   // -- RESIZE -------------------------------------------------------------------
-  const baseCameraDistance = 16; // original camera.position.z at portrait aspect
+  const baseCameraDistance = 16;
   const baseFov = 44;
-  new ResizeObserver(() => {
+
+  function handleResize() {
     const w = container.clientWidth  || 713;
     const h = container.clientHeight || 606;
+    console.log('[DiceResize] w:', w, 'h:', h, 'ratio:', (w/h).toFixed(2));
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
-
-    // Landscape / wide-short containers: pull camera back so fixed physics
-    // bounds (set once at init) stay fully inside the visible frustum.
     if (w / h > 1.6) {
       const pullBack = Math.min(2.2, (w / h) / 1.6);
       camera.position.set(0, 18 * pullBack, 16 * pullBack);
@@ -471,7 +470,10 @@ export async function initDice3D(canvasId) {
     }
     camera.lookAt(0, -2, -3);
     camera.updateProjectionMatrix();
-  }).observe(container);
+  }
+
+  new ResizeObserver(handleResize).observe(container);
+  window.addEventListener('resize', handleResize);
 
   // -- SETTLE POLLER ------------------------------------------------------------
   // Polls until all active dice (not in lockedIndices) have settled naturally.
