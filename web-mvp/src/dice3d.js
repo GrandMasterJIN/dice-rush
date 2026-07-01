@@ -451,11 +451,25 @@ export async function initDice3D(canvasId) {
   requestAnimationFrame(animate);
 
   // -- RESIZE -------------------------------------------------------------------
+  const baseCameraDistance = 16; // original camera.position.z at portrait aspect
+  const baseFov = 44;
   new ResizeObserver(() => {
     const w = container.clientWidth  || 713;
     const h = container.clientHeight || 606;
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
+
+    // Landscape / wide-short containers: pull camera back so fixed physics
+    // bounds (set once at init) stay fully inside the visible frustum.
+    if (w / h > 1.6) {
+      const pullBack = Math.min(2.2, (w / h) / 1.6);
+      camera.position.set(0, 18 * pullBack, 16 * pullBack);
+      camera.fov = Math.min(baseFov * pullBack, 65);
+    } else {
+      camera.position.set(0, 18, baseCameraDistance);
+      camera.fov = baseFov;
+    }
+    camera.lookAt(0, -2, -3);
     camera.updateProjectionMatrix();
   }).observe(container);
 
